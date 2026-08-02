@@ -31,7 +31,11 @@ export function useClientContent() {
     setItemsByClient((prev) => {
       const list = prev[client] || [];
       const num = list.length ? Math.max(...list.map((it) => it.num)) + 1 : 1;
-      const newItem = { num, week: 1, format: 'Static', topic: '', hook: '' };
+      const newItem = {
+        num, week: 1, platform: 'Instagram', format: 'Static', audience: '', funnel: '', pillar: '',
+        topic: '', hook: '', breakdown: '', visualDirection: '', cta: '',
+        assignee: '', date: '', notes: '', references: [],
+      };
       return { ...prev, [client]: [...list, newItem] };
     });
   }
@@ -43,5 +47,19 @@ export function useClientContent() {
     }));
   }
 
-  return { getItems, updateItem, addItem, removeItem };
+  // Upserts imported items into a client's list, matched by Post # (num).
+  // Additive only — never removes rows missing from the imported set.
+  function importItems(client, items) {
+    setItemsByClient((prev) => {
+      const list = prev[client] || [];
+      const byNum = new Map(list.map((it) => [it.num, it]));
+      items.forEach((incoming) => {
+        const cur = byNum.get(incoming.num);
+        byNum.set(incoming.num, cur ? { ...cur, ...incoming } : incoming);
+      });
+      return { ...prev, [client]: Array.from(byNum.values()).sort((a, b) => a.num - b.num) };
+    });
+  }
+
+  return { getItems, updateItem, addItem, removeItem, importItems };
 }

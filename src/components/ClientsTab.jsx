@@ -1,13 +1,20 @@
+import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { postKey, slug } from '../lib/derived.js';
+import ImportModal from './ImportModal.jsx';
 
 export default function ClientsTab() {
-  const { posts, blogs, content } = useOutletContext();
+  const { posts, blogs, content, setPostStatus } = useOutletContext();
+  const [importOpen, setImportOpen] = useState(false);
 
   return (
     <>
+      <div className="clients-toolbar">
+        <button className="add-post-btn" onClick={() => setImportOpen(true)}>Import calendar</button>
+      </div>
+
       {ALL_CLIENTS.map((client) => {
         const items = content.getItems(client);
         const hasP = POST_TARGETS[client] !== undefined;
@@ -50,6 +57,8 @@ export default function ClientsTab() {
           </Link>
         );
       })}
+
+      {importOpen && <ImportModal content={content} setPostStatus={setPostStatus} onClose={() => setImportOpen(false)} />}
     </>
   );
 }
