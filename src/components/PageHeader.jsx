@@ -6,8 +6,14 @@ import { slug } from '../lib/derived.js';
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const CAMPAIGN_LABEL = `${MONTH_NAMES[CAMPAIGN_MONTH_INDEX]} ${CAMPAIGN_YEAR}`;
 
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 const COPY = {
-  '/': { title: 'Overview', subtitle: `Where ${CAMPAIGN_LABEL} stands, at a glance` },
   '/weekly': { title: 'Weekly Plan', subtitle: 'Batch cadence, week by week' },
   '/clients': { title: 'Clients', subtitle: 'Every post and blog creative, by client' },
 };
@@ -41,7 +47,16 @@ export default function PageHeader({ posts, blogs, content }) {
     );
   }
 
-  const meta = COPY[location.pathname] || COPY['/'];
+  if (location.pathname === '/') {
+    return (
+      <header className="main-header">
+        <h1 className="page-title">{greeting()}, Vivek</h1>
+        <div className="page-subtitle">Here's where {CAMPAIGN_LABEL} stands, at a glance</div>
+      </header>
+    );
+  }
+
+  const meta = COPY[location.pathname] || COPY['/weekly'];
   return (
     <header className="main-header">
       <h1 className="page-title">{meta.title}</h1>

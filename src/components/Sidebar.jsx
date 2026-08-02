@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import mmmLogo from '../assets/mmmlogo.png';
+import profilePic from '../assets/profile-vivek.jpg';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
@@ -38,8 +39,16 @@ export default function Sidebar({ shipped, target, showSignOut, onSignOut }) {
         <div className="bar-track sidebar-bar-track">
           <div className="bar-fill" style={{ width: `${pct}%` }} />
         </div>
+      </div>
+
+      <div className="sidebar-profile">
+        <img className="sidebar-avatar" src={profilePic} alt="Vivek S.L" />
+        <div className="sidebar-profile-info">
+          <div className="sidebar-profile-name">Vivek S.L</div>
+          <div className="sidebar-profile-role">Graphic Designer</div>
+        </div>
         {showSignOut && (
-          <button className="sidebar-signout" onClick={onSignOut}>Sign out</button>
+          <button className="sidebar-signout" onClick={onSignOut} title="Sign out">⏻</button>
         )}
       </div>
     </aside>
