@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMM — August Production Console</title>
+</head>
+<body style="margin:0; padding:20px; background:#F0F0F0; font-family: 'Segoe UI', Helvetica, Arial, sans-serif;">
+<style>
+  #console-root {
+    --bg: #FFFFFF;
+    --bg-alt: #F7F5F2;
+    --bg-card: #FFFFFF;
+    --ink: #111111;
+    --ink-dim: #5A5A5A;
+    --ink-faint: #8A8A8A;
+    --rule: #E2E2E2;
+    --red: #C0392B;
+    --red-dark: #8A2E22;
+    --red-tint: #FBEAE7;
+    --green: #4B7A51;
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  #console-root * { box-sizing: border-box; }
+  .mono { font-family: 'Consolas', 'Courier New', monospace; }
+
+  /* ===== Top bar ===== */
+  .topbar {
+    padding: 18px 26px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-title { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
+  .brand-sub { font-size: 11px; color: var(--ink-faint); }
+  .topbar-stat { display: flex; align-items: baseline; gap: 6px; }
+  .topbar-stat .n { font-size: 20px; font-weight: 700; color: var(--red); font-variant-numeric: tabular-nums; }
+  .topbar-stat .l { font-size: 11px; color: var(--ink-faint); }
+
+  /* ===== Tab nav ===== */
+  .tabnav {
+    display: flex;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg-alt);
+    padding: 0 26px;
+  }
+  .tab-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--red); }
+  .tab-btn:hover:not(.active) { color: var(--ink-dim); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .scroll-area {
+    max-height: 640px;
+    overflow-y: auto;
+    padding: 22px 26px 30px;
+  }
+  .scroll-area::-webkit-scrollbar { width: 8px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: #CCCCCC; border-radius: 4px; }
+
+  /* ===== Overview: stat row ===== */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .stat-card {
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat-card .n { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-card .l { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+
+  /* ===== Today card ===== */
+  .today-card {
+    border: 1px solid var(--red);
+    background: var(--red-tint);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 22px;
+  }
+  .today-eyebrow { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--red-dark); font-weight: 700; margin-bottom: 6px; }
+  .today-title { font-size: 16px; font-weight: 700; }
+  .today-detail { font-size: 12.5px; color: var(--ink-dim); margin-top: 4px; }
+
+  /* ===== Section label ===== */
+  .section-label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-faint);
+    margin: 0 0 12px; font-weight: 600;
+  }
+
+  /* ===== Chart ===== */
+  .chart-block { margin-bottom: 26px; }
+
+  /* ===== Attention list ===== */
+  .attn-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border: 1px solid var(--rule); border-radius: 6px; margin-bottom: 8px;
+  }
+  .attn-row .t { font-size: 13px; }
+  .attn-row .t b { color: var(--red-dark); }
+  .attn-row .go { font-size: 11px; color: var(--red); font-weight: 600; cursor: pointer; }
+
+  /* ===== Weekly cards (shared with clients tab layout) ===== */
+  .wk-card {
+    border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 14px; overflow: hidden;
+  }
+  .wk-card.current { border-color: var(--red); }
+  .wk-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 16px; cursor: pointer; flex-wrap: wrap; gap: 10px;
+  }
+  .wk-title-block { display: flex; align-items: baseline; gap: 10px; }
+  .wk-name { font-size: 15px; font-weight: 700; }
+  .wk-dates { font-size: 11px; color: var(--ink-faint); }
+  .wk-badge {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    background: var(--red); color: #fff; padding: 2px 7px; border-radius: 3px; font-weight: 700;
+  }
+  .wk-right { display: flex; align-items: center; gap: 14px; }
+  .bar-wrap { width: 150px; }
+  .bar-track { height: 6px; background: #EEEEEE; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--red); transition: width .3s ease; }
+  .bar-num { font-size: 10px; color: var(--ink-faint); margin-top: 4px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chev { color: var(--ink-faint); font-size: 12px; transition: transform .2s ease; }
+  .wk-card.open .chev { transform: rotate(90deg); }
+  .wk-body { display: none; border-top: 1px solid var(--rule); }
+  .wk-card.open .wk-body { display: block; }
+
+  .wk-clients { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--rule); }
+  .client-chip { font-size: 11px; padding: 4px 9px; border-radius: 20px; border: 1px solid var(--rule); color: var(--ink-dim); }
+  .client-chip b { color: var(--ink); }
+  .client-chip.warn { border-color: var(--red); color: var(--red-dark); background: var(--red-tint); }
+
+  .note { margin: 0 16px 12px; padding: 8px 11px; background: var(--red-tint); border-left: 3px solid var(--red); font-size: 11.5px; color: var(--red-dark); border-radius: 0 4px 4px 0; }
+
+  .day-row { display: flex; gap: 14px; padding: 11px 16px; border-bottom: 1px solid var(--rule); align-items: flex-start; }
+  .day-row:last-child { border-bottom: none; }
+  .day-tag { width: 64px; flex-shrink: 0; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--red); padding-top: 2px; font-weight: 700; }
+  .day-tag .dt { display: block; font-size: 9px; color: var(--ink-faint); margin-top: 2px; letter-spacing: 0.5px; text-transform: none; font-weight: 400; }
+  .day-content { flex: 1; }
+  .day-task { font-size: 13px; }
+  .day-detail { font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; }
+  .day-hours { font-size: 11px; color: var(--red-dark); flex-shrink: 0; white-space: nowrap; padding-top: 2px; font-variant-numeric: tabular-nums; }
+
+  /* ===== Clients tab ===== */
+  .client-block { border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+  .client-head { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; cursor: pointer; gap: 12px; flex-wrap: wrap; }
+  .client-name { font-size: 15px; font-weight: 700; }
+  .client-meta { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+  .client-body { display: none; border-top: 1px solid var(--rule); }
+  .client-block.open .client-body { display: block; }
+
+  .item-row { display: flex; align-items: center; gap: 12px; padding: 9px 16px; border-bottom: 1px solid var(--rule); }
+  .item-row:last-child { border-bottom: none; }
+  .item-num { font-size: 10px; color: var(--ink-faint); width: 20px; flex-shrink: 0; }
+  .item-wk { font-size: 9px; color: var(--red-dark); border: 1px solid var(--red); border-radius: 3px; padding: 2px 5px; flex-shrink: 0; width: 30px; text-align: center; }
+  .item-fmt { font-size: 9px; text-transform: uppercase; color: var(--ink-faint); width: 56px; flex-shrink: 0; letter-spacing: 0.5px; }
+  .item-text { flex: 1; min-width: 0; }
+  .item-topic { font-size: 13px; }
+  .item-hook { font-size: 11px; color: var(--ink-faint); font-style: italic; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-btn { font-size: 10px; padding: 5px 9px; border-radius: 4px; border: 1px solid; cursor: pointer; flex-shrink: 0; width: 104px; text-align: center; }
+  .status-btn:hover { filter: brightness(0.97); }
+
+  .blog-block { padding: 13px 16px; }
+  .blog-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .blog-label { font-size: 12px; color: var(--ink-dim); }
+  .blog-controls { display: flex; align-items: center; gap: 10px; }
+  .blog-btn { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--rule); background: var(--bg-alt); color: var(--ink); cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .blog-btn:hover { border-color: var(--red); color: var(--red); }
+  .blog-count { font-size: 13px; color: var(--red); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .bar-wrap { display: none; }
+    .item-hook, .item-fmt { display: none; }
+    .scroll-area { padding: 16px; }
+    .topbar, .tabnav { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+
+<div id="console-root">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-title">August Production Console</div>
+      <div class="brand-sub">MMM · 6 clients</div>
+    </div>
+    <div class="topbar-stat">
+      <span class="n mono" id="top-shipped">0</span><span class="l">/ 119 shipped</span>
+    </div>
+  </div>
+
+  <div class="tabnav">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="weekly">Weekly Plan</button>
+    <button class="tab-btn" data-tab="clients">Clients</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="tab-panel active" data-panel="overview">
+    <div class="scroll-area">
+      <div id="today-card"></div>
+
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <div class="chart-block">
+        <div class="section-label">Weekly load — bar height = due, filled = shipped</div>
+        <svg id="burn-chart" viewBox="0 0 640 180" style="width:100%; height:180px;"></svg>
+      </div>
+
+      <div class="section-label">Needs attention</div>
+      <div id="attn-list"></div>
+    </div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div class="tab-panel" data-panel="weekly">
+    <div class="scroll-area" id="weekly-container"></div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="tab-panel" data-panel="clients">
+    <div class="scroll-area" id="clients-container"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const DATA = {"My Health": [{"num": 1, "week": 1, "format": "Carousel", "topic": "The Science of Healthy Aging", "hook": "Aging is optional. Decline isn't."}, {"num": 2, "week": 1, "format": "Static", "topic": "Prevention Is Your Greatest Investment", "hook": "Don't wait for symptoms."}, {"num": 3, "week": 1, "format": "Reel", "topic": "Morning Habits for Longevity", "hook": "Your first hour matters."}, {"num": 4, "week": 1, "format": "Carousel", "topic": "Foods That Support Healthy Aging", "hook": "Eat for the next 20 years."}, {"num": 5, "week": 1, "format": "Static", "topic": "Why Choose My Health", "hook": "Healthcare, reimagined."}, {"num": 6, "week": 2, "format": "Reel", "topic": "Move More, Live Better", "hook": "Every step counts."}, {"num": 7, "week": 2, "format": "Carousel", "topic": "What Does a Preventive Check-up Include?", "hook": "Know your numbers before they matter."}, {"num": 8, "week": 2, "format": "Static", "topic": "Sleep Is Your Best Recovery Tool", "hook": "Better sleep. Better life."}, {"num": 9, "week": 2, "format": "Reel", "topic": "Inside My Health", "hook": "A premium healthcare experience."}, {"num": 10, "week": 3, "format": "Carousel", "topic": "5 Silent Risk Factors", "hook": "You can't feel everything."}, {"num": 11, "week": 3, "format": "Static", "topic": "Your Body Needs More Than Water", "hook": "Hydration impacts every cell."}, {"num": 12, "week": 3, "format": "Reel", "topic": "Advanced Health Screening", "hook": "Prevention powered by technology."}, {"num": 13, "week": 3, "format": "Carousel", "topic": "How Stress Speeds Up Aging", "hook": "Stress leaves invisible marks."}, {"num": 14, "week": 4, "format": "Static", "topic": "Meet Our Specialists", "hook": "Experts dedicated to your longevity."}, {"num": 15, "week": 4, "format": "Reel", "topic": "Build a Longevity Plate", "hook": "Every meal is an investment."}, {"num": 16, "week": 4, "format": "Carousel", "topic": "Strength Training & Longevity", "hook": "Muscle is medicine."}, {"num": 17, "week": 4, "format": "Static", "topic": "Small Habits. Big Results.", "hook": "Consistency beats intensity."}, {"num": 18, "week": 4, "format": "Reel", "topic": "A Day at My Health", "hook": "Wellness starts here."}, {"num": 19, "week": 5, "format": "Carousel", "topic": "When Should You Get Screened?", "hook": "The right time is before symptoms."}, {"num": 20, "week": 5, "format": "Static", "topic": "Invest in Your Future Self", "hook": "Your future health starts today."}],
+  "Sikkini": [{"num": 1, "week": 1, "format": "Carousel", "topic": "Why Commercial Kitchens Should Stop Buying Knives", "hook": "Stop Buying. Start Exchanging."}, {"num": 2, "week": 1, "format": "Reel", "topic": "Tomato Slice Test", "hook": "One Slice Says It All."}, {"num": 3, "week": 1, "format": "Static", "topic": "What is SIKKINI?", "hook": "Knife Exchange Simplified."}, {"num": 4, "week": 1, "format": "Carousel", "topic": "Hidden Cost of Dull Knives", "hook": "You're Losing More Than Sharpness."}, {"num": 5, "week": 1, "format": "Reel", "topic": "Exchange Day", "hook": "30 Seconds. Zero Downtime."}, {"num": 6, "week": 1, "format": "Carousel", "topic": "How the Exchange Works", "hook": "Supply → Exchange → Sharpen → Repeat"}, {"num": 7, "week": 1, "format": "Static", "topic": "Knife Safety Tip", "hook": "Sharp Knives Are Safer."}, {"num": 8, "week": 2, "format": "Reel", "topic": "Paper Cutting Test", "hook": "Is Your Knife Really Sharp?"}, {"num": 9, "week": 2, "format": "Carousel", "topic": "Color-Coded Knives", "hook": "Prevent Cross Contamination."}, {"num": 10, "week": 2, "format": "Reel", "topic": "Inside Tormek T8", "hook": "Precision You Can't See."}, {"num": 11, "week": 2, "format": "Static", "topic": "Meet the Team", "hook": "Experts Behind Every Blade."}, {"num": 12, "week": 2, "format": "Carousel", "topic": "Knife Arsenal", "hook": "One Service. Every Knife."}, {"num": 13, "week": 2, "format": "Reel", "topic": "Chef Prep Challenge", "hook": "Prep Faster."}, {"num": 14, "week": 2, "format": "Carousel", "topic": "Restaurant vs SIKKINI", "hook": "Which Kitchen Runs Better?"}, {"num": 15, "week": 3, "format": "Reel", "topic": "Delivery Day", "hook": "Always On Time."}, {"num": 16, "week": 3, "format": "Static", "topic": "Knife Care Myth", "hook": "Don't Store It Like This."}, {"num": 17, "week": 3, "format": "Carousel", "topic": "Cost Comparison", "hook": "Renting Beats Buying."}, {"num": 18, "week": 3, "format": "Reel", "topic": "Slow Motion Prep", "hook": "Every Slice Matters."}, {"num": 19, "week": 3, "format": "Carousel", "topic": "Sanitation Process", "hook": "Clean Every Exchange."}, {"num": 20, "week": 3, "format": "Reel", "topic": "Quality Inspection", "hook": "Every Knife Checked."}, {"num": 21, "week": 3, "format": "Static", "topic": "2-Week Free Trial", "hook": "Try Risk-Free."}, {"num": 22, "week": 4, "format": "Carousel", "topic": "Why Hotels Choose SIKKINI", "hook": "Built for Busy Kitchens."}, {"num": 23, "week": 4, "format": "Reel", "topic": "Knife Anatomy", "hook": "Know Your Blade."}, {"num": 24, "week": 4, "format": "Carousel", "topic": "Save Hours Weekly", "hook": "Time Is Money."}, {"num": 25, "week": 4, "format": "Reel", "topic": "Chef Testimonial", "hook": "Why We Switched."}, {"num": 26, "week": 4, "format": "Static", "topic": "Client Quote", "hook": "Trusted by Professionals."}, {"num": 27, "week": 4, "format": "Carousel", "topic": "Choose the Right Knife", "hook": "One Knife Doesn't Fit All."}, {"num": 28, "week": 4, "format": "Reel", "topic": "Dull to Razor Sharp", "hook": "See the Difference."}, {"num": 29, "week": 5, "format": "Carousel", "topic": "Frequently Asked Questions", "hook": "Everything You Need."}, {"num": 30, "week": 5, "format": "Reel", "topic": "Book Your Trial", "hook": "Ready to Upgrade?"}],
+  "Man Made Marketing": [{"num": 1, "week": 1, "format": "Static", "topic": "Blue Builds Trust", "hook": "Why do banks love blue?"}, {"num": 2, "week": 1, "format": "Reel", "topic": "Why Apple Never Discounts", "hook": "Premium isn't about price"}, {"num": 3, "week": 1, "format": "Carousel", "topic": "5 Branding Mistakes", "hook": "Is your brand making these mistakes?"}, {"num": 4, "week": 1, "format": "Reel", "topic": "Red Makes You Hungry", "hook": "There's a reason restaurants use red"}, {"num": 5, "week": 2, "format": "Static", "topic": "People Buy Stories", "hook": "Stop selling. Start storytelling."}, {"num": 6, "week": 2, "format": "Carousel", "topic": "Why Consistency Wins", "hook": "The strongest brands repeat"}, {"num": 7, "week": 2, "format": "Reel", "topic": "Can You Recognize This Logo?", "hook": "Remove the name, keep the shape"}, {"num": 8, "week": 2, "format": "Static", "topic": "First Impressions Matter", "hook": "Your website has 5 seconds"}, {"num": 9, "week": 3, "format": "Carousel", "topic": "Fonts That Build Trust", "hook": "Typography changes perception"}, {"num": 10, "week": 3, "format": "Reel", "topic": "Why Nike Doesn't Sell Shoes", "hook": "They're selling identity"}, {"num": 11, "week": 3, "format": "Static", "topic": "What We Actually Do", "hook": "More than social media"}, {"num": 12, "week": 3, "format": "Carousel", "topic": "Signs Your Website Needs a Redesign", "hook": "Losing customers without knowing?"}, {"num": 13, "week": 4, "format": "Reel", "topic": "AI Won't Replace Good Branding", "hook": "Strategy still wins"}, {"num": 14, "week": 4, "format": "Carousel", "topic": "Before & After Branding", "hook": "See the transformation"}, {"num": 15, "week": 4, "format": "Reel", "topic": "Let's Build Something Memorable", "hook": "Your next customer is watching"}],
+  "Fika Time": [{"num": 101, "week": 1, "format": "Carousel", "topic": "Fresh from the Oven", "hook": "Freshly Baked Every Day"}, {"num": 102, "week": 1, "format": "Reel", "topic": "Brand Awareness Film", "hook": "Atmosphere & Fresh Food"}, {"num": 103, "week": 1, "format": "Static", "topic": "Coffee & Cake Pairing", "hook": "Freshly Baked Every Day"}, {"num": 104, "week": 2, "format": "Reel", "topic": "Brunch Moments", "hook": "Atmosphere & Fresh Food"}, {"num": 105, "week": 2, "format": "Reel", "topic": "Fuel Your Morning", "hook": "Back to School"}, {"num": 106, "week": 2, "format": "Static", "topic": "Dessert Spotlight", "hook": "Freshly Baked Every Day"}, {"num": 107, "week": 2, "format": "Reel", "topic": "Slow Down at Fika", "hook": "Atmosphere & Fresh Food"}]};
+
+  const POST_TARGETS = { "My Health": 20, "Sikkini": 30, "Man Made Marketing": 15, "Fika Time": 15 };
+  const BLOG_TARGETS = { "My Health": 8, "Journey Wellness": 8, "Sikkini": 8, "Man Made Marketing": 7, "Eshopify Fulfillment": 8 };
+  const TIME_MIN = { Static: 25, Carousel: 50, Reel: 75, Blog: 105, Gap: 45 };
+  const FIKA_GAP = { 3: 4, 4: 4 };
+  const WEEK_RANGES = {
+    1: { label: "Week 1", start: "Aug 1", end: "Aug 9" },
+    2: { label: "Week 2", start: "Aug 10", end: "Aug 16" },
+    3: { label: "Week 3", start: "Aug 17", end: "Aug 23" },
+    4: { label: "Week 4", start: "Aug 24", end: "Aug 31" }
+  };
+  const BATCH_TASK = {
+    1: { name: "Hooks & Captions", detail: "Write copy for the week's full batch, grouped by pillar" },
+    2: { name: "Statics + Carousels", detail: "Build all static and carousel visuals in one tool session" },
+    3: { name: "Reels", detail: "Batch the Reel edits and exports" },
+    4: { name: "Blog Drafts", detail: "Protected day — the longest single-item lift" },
+    5: { name: "Review & Schedule", detail: "Client review sends, revisions, scheduling, QA" }
+  };
+
+  const STATUSES = ["Planned", "Drafted", "Sent to Client", "Scheduled", "Published"];
+  const STATUS_COLOR = {
+    "Planned":        { bg: "#F2F2F2", fg: "#5A5A5A", bd: "#D8D8D8" },
+    "Drafted":        { bg: "#EFF4EF", fg: "#4B7A51", bd: "#CBE0CC" },
+    "Sent to Client": { bg: "#FBEAE7", fg: "#C0392B", bd: "#EFC3BB" },
+    "Scheduled":      { bg: "#F0F0F0", fg: "#333333", bd: "#CCCCCC" },
+    "Published":      { bg: "#E9F3EA", fg: "#2F5D34", bd: "#B9D8BC" }
+  };
+
+  let state = { posts: {}, blogs: {} };
+  const STORAGE_KEY = "mmm-aug2026-production-tracker";
+
+  function wkBucket(w) { return w === 5 ? 4 : w; }
+  function postKey(client, num) { return client + "::" + num; }
+  function slug(s) { return s.replace(/[^a-z0-9]/gi, '-').toLowerCase(); }
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtHours(min) { return (min/60).toFixed(1) + "h"; }
+
+  async function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state.posts = parsed.posts || {};
+        state.blogs = parsed.blogs || {};
+      }
+    } catch (e) {}
+  }
+  async function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // ---------- derived data ----------
+  const weekly = {1:{Static:0,Carousel:0,Reel:0,clients:{}}, 2:{Static:0,Carousel:0,Reel:0,clients:{}}, 3:{Static:0,Carousel:0,Reel:0,clients:{}}, 4:{Static:0,Carousel:0,Reel:0,clients:{}}};
+  Object.keys(POST_TARGETS).forEach(client => {
+    (DATA[client]||[]).forEach(it => {
+      const w = wkBucket(it.week);
+      weekly[w][it.format] = (weekly[w][it.format]||0) + 1;
+      weekly[w].clients[client] = (weekly[w].clients[client]||0) + 1;
+    });
+  });
+  const blogPerWeek = {1:{},2:{},3:{},4:{}};
+  Object.keys(BLOG_TARGETS).forEach(client => {
+    const target = BLOG_TARGETS[client];
+    const base = Math.floor(target/4);
+    let rem = target - base*4;
+    for (let w=1; w<=4; w++) { blogPerWeek[w][client] = base + (rem>0?1:0); if (rem>0) rem--; }
+  });
+  function weekBlogTotal(w) { return Object.values(blogPerWeek[w]).reduce((a,b)=>a+b,0); }
+  function weekPostTotal(w) { const f=weekly[w]; return (f.Static||0)+(f.Carousel||0)+(f.Reel||0)+(FIKA_GAP[w]||0); }
+  function weekTarget(w) { return weekPostTotal(w) + weekBlogTotal(w); }
+  function weekMinutes(w) {
+    const f = weekly[w];
+    let m = (f.Static||0)*TIME_MIN.Static + (f.Carousel||0)*TIME_MIN.Carousel + (f.Reel||0)*TIME_MIN.Reel;
+    m += weekBlogTotal(w) * TIME_MIN.Blog;
+    m += (FIKA_GAP[w]||0) * TIME_MIN.Gap;
+    return m;
+  }
+  function weekDone(w) {
+    let done = 0;
+    Object.keys(POST_TARGETS).forEach(client => {
+      (DATA[client]||[]).forEach(it => {
+        if (wkBucket(it.week) !== w) return;
+        if (state.posts[postKey(client, it.num)] === "Published") done++;
+      });
+    });
+    return done;
+  }
+  function totalTargets() {
+    let t = 0;
+    Object.values(POST_TARGETS).forEach(v=>t+=v);
+    Object.values(BLOG_TARGETS).forEach(v=>t+=v);
+    return t;
+  }
+  function totalShipped() {
+    let n = 0;
+    Object.values(state.posts).forEach(s => { if (s==="Published") n++; });
+    Object.values(state.blogs).forEach(c => { n += (c||0); });
+    return n;
+  }
+
+  function getTodayInfo() {
+    const now = new Date();
+    const day = now.getDate(), month = now.getMonth(), year = now.getFullYear();
+    const weekday = now.getDay();
+    let weekNum = null;
+    if (year === 2026 && month === 7) {
+      if (day <= 9) weekNum = 1; else if (day <= 16) weekNum = 2; else if (day <= 23) weekNum = 3; else weekNum = 4;
+    }
+    return { weekday, weekNum, dateStr: now.toDateString() };
+  }
+
+  // ---------- OVERVIEW ----------
+  function renderToday() {
+    const { weekday, weekNum } = getTodayInfo();
+    const el = document.getElementById('today-card');
+    if (!weekNum) {
+      el.innerHTML = `<div class="today-card"><div class="today-eyebrow">Outside campaign window</div><div class="today-title">This console tracks August 2026</div></div>`;
+      return;
+    }
+    if (weekday === 0 || weekday === 6) {
+      el.innerHTML = `<div class="today-card"><div class="today-eyebrow">${WEEK_RANGES[weekNum].label} · Off day</div><div class="today-title">No batch task today</div><div class="today-detail">Next up: Monday — hooks &amp; captions for ${WEEK_RANGES[weekNum].label}</div></div>`;
+      return;
+    }
+    const task = BATCH_TASK[weekday];
+    el.innerHTML = `
+      <div class="today-card">
+        <div class="today-eyebrow">${WEEK_RANGES[weekNum].label} · Today's batch</div>
+        <div class="today-title">${task.name}</div>
+        <div class="today-detail">${task.detail}</div>
+      </div>`;
+  }
+
+  function renderStats() {
+    const target = totalTargets();
+    const shipped = totalShipped();
+    const { weekNum } = getTodayInfo();
+    const wk = weekNum || 1;
+    const grid = document.getElementById('stat-grid');
+    grid.innerHTML = `
+      <div class="stat-card"><div class="n mono">${target - shipped}</div><div class="l">items remaining</div></div>
+      <div class="stat-card"><div class="n mono">${shipped}</div><div class="l">shipped so far</div></div>
+      <div class="stat-card"><div class="n mono">${WEEK_RANGES[wk].label}</div><div class="l">${weekDone(wk)}/${weekTarget(wk)} this week</div></div>
+      <div class="stat-card"><div class="n mono">~${fmtHours(weekMinutes(wk))}</div><div class="l">est. hours this week</div></div>
+    `;
+  }
+
+  function renderChart() {
+    const svg = document.getElementById('burn-chart');
+    const W = 640, H = 180, padL = 36, padB = 34, padT = 12;
+    const chartW = W - padL - 16, chartH = H - padT - padB;
+    const maxTarget = Math.max(...[1,2,3,4].map(w=>weekTarget(w))) * 1.15;
+    const gap = chartW / 4, barW = gap * 0.5;
+    const { weekNum: current } = getTodayInfo();
+    const cur = current || 1;
+    let axis = "", bars = "";
+    for (let i=0; i<=3; i++) {
+      const y = padT + chartH - (chartH*i/3);
+      axis += `<line x1="${padL}" y1="${y}" x2="${W-16}" y2="${y}" stroke="#EDEDED" stroke-width="1"/>`;
+      axis += `<text x="${padL-8}" y="${y+3}" font-size="9" fill="#8A8A8A" text-anchor="end" font-family="Consolas, monospace">${Math.round(maxTarget*i/3)}</text>`;
+    }
+    for (let w=1; w<=4; w++) {
+      const target = weekTarget(w);
+      const done = weekDone(w);
+      const x = padL + gap*(w-1) + (gap-barW)/2;
+      const barH = (target/maxTarget)*chartH, doneH = (done/maxTarget)*chartH;
+      const y = padT+chartH-barH, doneY = padT+chartH-doneH;
+      const isCurrent = w === cur;
+      bars += `
+        <rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="none" stroke="${isCurrent?'#C0392B':'#D8D8D8'}" stroke-width="1.5"/>
+        <rect x="${x}" y="${doneY}" width="${barW}" height="${doneH}" rx="3" fill="#C0392B"/>
+        <text x="${x+barW/2}" y="${padT+chartH+16}" font-size="10" fill="${isCurrent?'#C0392B':'#5A5A5A'}" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="${isCurrent?'700':'400'}">${WEEK_RANGES[w].label}</text>
+        <text x="${x+barW/2}" y="${y-8}" font-size="10" fill="#111111" text-anchor="middle" font-family="Consolas, monospace">${target}</text>
+        <text x="${x+barW/2}" y="${padT+chartH+28}" font-size="8.5" fill="#8A2E22" text-anchor="middle" font-family="Consolas, monospace">~${fmtHours(weekMinutes(w))}</text>
+      `;
+    }
+    svg.innerHTML = axis + bars;
+  }
+
+  function renderAttention() {
+    const list = document.getElementById('attn-list');
+    const rows = [];
+    rows.push(`<div class="attn-row"><div class="t">Fika Time is short <b>8 posts</b> against its 15-post target</div><div class="go" data-goto-client="Fika Time">Open →</div></div>`);
+    [1,2,3,4].forEach(w => {
+      if (weekMinutes(w)/60 > 32) {
+        rows.push(`<div class="attn-row"><div class="t">${WEEK_RANGES[w].label} runs <b>~${fmtHours(weekMinutes(w))}</b> of production — plan the extra time</div><div class="go" data-goto-week="${w}">Open →</div></div>`);
+      }
+    });
+    list.innerHTML = rows.join('');
+    list.querySelectorAll('[data-goto-week]').forEach(el => {
+      el.addEventListener('click', () => { switchTab('weekly'); openWeek(el.dataset.gotoWeek); });
+    });
+    list.querySelectorAll('[data-goto-client]').forEach(el => {
+      el.addEventListener('click', () => { switchTab('clients'); openClient(el.dataset.gotoClient); });
+    });
+  }
+
+  // ---------- WEEKLY TAB ----------
+  function clientChips(w) {
+    const chips = [];
+    Object.keys(weekly[w].clients).forEach(c => chips.push(`<div class="client-chip"><b>${weekly[w].clients[c]}</b> ${c}</div>`));
+    if (FIKA_GAP[w]) chips.push(`<div class="client-chip warn"><b>${FIKA_GAP[w]}</b> Fika Time (needs topics)</div>`);
+    Object.keys(blogPerWeek[w]).forEach(c => { if (blogPerWeek[w][c]>0) chips.push(`<div class="client-chip"><b>${blogPerWeek[w][c]}</b> ${c} blog${blogPerWeek[w][c]>1?'s':''}</div>`); });
+    return chips.join('');
+  }
+  function dayPlan(w) {
+    const f = weekly[w];
+    const scMin = (f.Static||0)*TIME_MIN.Static + (f.Carousel||0)*TIME_MIN.Carousel;
+    const reelMin = (f.Reel||0)*TIME_MIN.Reel;
+    const blogMin = weekBlogTotal(w)*TIME_MIN.Blog;
+    return `
+      <div class="day-row"><div class="day-tag">MON</div><div class="day-content"><div class="day-task">Lock hooks &amp; captions — all clients, grouped by pillar</div><div class="day-detail">${weekPostTotal(w)} posts + ${weekBlogTotal(w)} blogs need copy</div></div></div>
+      <div class="day-row"><div class="day-tag">TUE<span class="dt">statics + carousels</span></div><div class="day-content"><div class="day-task">${f.Static||0} statics, ${f.Carousel||0} carousels</div></div><div class="day-hours">~${fmtHours(scMin)}</div></div>
+      <div class="day-row"><div class="day-tag">WED<span class="dt">reels</span></div><div class="day-content"><div class="day-task">${f.Reel||0} Reels — batch edits and exports</div></div><div class="day-hours">~${fmtHours(reelMin)}</div></div>
+      <div class="day-row"><div class="day-tag">THU<span class="dt">blogs</span></div><div class="day-content"><div class="day-task">${weekBlogTotal(w)} blog drafts across ${Object.values(blogPerWeek[w]).filter(v=>v>0).length} clients</div></div><div class="day-hours">~${fmtHours(blogMin)}</div></div>
+      <div class="day-row"><div class="day-tag">FRI</div><div class="day-content"><div class="day-task">Client review sends, revisions, scheduling, QA</div></div></div>
+    `;
+  }
+  function renderWeekly() {
+    const { weekNum: current } = getTodayInfo();
+    const cur = current || 1;
+    const container = document.getElementById('weekly-container');
+    let html = '';
+    [1,2,3,4].forEach(w => {
+      const target = weekTarget(w), done = weekDone(w);
+      const pct = target ? Math.round(done/target*100) : 0;
+      const r = WEEK_RANGES[w];
+      const isCurrent = w === cur;
+      let gapNote = FIKA_GAP[w] ? `<div class="note">Includes ${FIKA_GAP[w]} Fika Time slots with no topic yet — plan these Monday, before the rest of the week's copy.</div>` : '';
+      let loadNote = weekMinutes(w)/60 > 32 ? `<div class="note">~${fmtHours(weekMinutes(w))} of production this week (~${(weekMinutes(w)/60/5).toFixed(1)}h/day across a 5-day batch).</div>` : '';
+      html += `
+        <div class="wk-card ${isCurrent?'current':''}" data-week="${w}">
+          <div class="wk-head" data-toggle="${w}">
+            <div class="wk-title-block">
+              <div class="wk-name">${r.label}</div>
+              <div class="wk-dates mono">${r.start} – ${r.end}</div>
+              ${isCurrent ? '<div class="wk-badge">This week</div>' : ''}
+            </div>
+            <div class="wk-right">
+              <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-num mono">${done} / ${target} shipped</div></div>
+              <div class="chev">▸</div>
+            </div>
+          </div>
+          <div class="wk-body">
+            <div class="wk-clients">${clientChips(w)}</div>
+            ${gapNote}${loadNote}
+            ${dayPlan(w)}
+          </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+    container.querySelectorAll('[data-toggle]').forEach(h => h.addEventListener('click', () => h.closest('.wk-card').classList.toggle('open')));
+    openWeek(cur);
+  }
+  function openWeek(w) {
+    document.querySelectorAll('.wk-card').forEach(c => c.classList.remove('open'));
+    const el = document.querySelector(`.wk-card[data-week="${w}"]`);
+    if (el) el.classList.add('open');
+  }
+
+  // ---------- CLIENTS TAB ----------
+  function nextStatus(cur) { const i = STATUSES.indexOf(cur); return STATUSES[(i+1)%STATUSES.length]; }
+
+  function renderClients() {
+    const allClients = ["My Health","Sikkini","Man Made Marketing","Fika Time","Journey Wellness","Eshopify Fulfillment"];
+    const container = document.getElementById('clients-container');
+    let html = '';
+    allClients.forEach(client => {
+      const items = DATA[client] || [];
+      const hasP = POST_TARGETS[client] !== undefined;
+      const hasB = BLOG_TARGETS[client] !== undefined;
+      let doneCount = 0;
+      const rows = items.map(it => {
+        const key = postKey(client, it.num);
+        const status = state.posts[key] || "Planned";
+        state.posts[key] = status;
+        if (status === "Published") doneCount++;
+        const col = STATUS_COLOR[status];
+        return `
+          <div class="item-row">
+            <div class="item-num mono">${it.num < 100 ? String(it.num).padStart(2,'0') : ''}</div>
+            <div class="item-wk">W${it.week > 4 ? 4 : it.week}</div>
+            <div class="item-fmt">${it.format}</div>
+            <div class="item-text"><div class="item-topic">${escapeHtml(it.topic)}</div><div class="item-hook">${escapeHtml(it.hook)}</div></div>
+            <button class="status-btn" data-key="${key}" style="background:${col.bg}; color:${col.fg}; border-color:${col.bd};">${status}</button>
+          </div>`;
+      }).join('');
+      const postTarget = POST_TARGETS[client] || 0;
+      const blogTarget = BLOG_TARGETS[client] || 0;
+      const blogCount = state.blogs[client] || 0;
+      const totalDone = doneCount + blogCount, totalTarget = postTarget + blogTarget;
+      const pct = totalTarget ? Math.round(totalDone/totalTarget*100) : 0;
+      const metaBits = [];
+      if (hasP) metaBits.push(`${items.length}/${postTarget} posts planned`);
+      if (hasB) metaBits.push(`${blogTarget} blogs`);
+      const note = client === "Fika Time" ? `<div class="note">7 of 15 posts scheduled — 8 more need topics to hit target.</div>` : '';
+      const blogHtml = hasB ? `
+        <div class="blog-block"><div class="blog-row">
+          <div class="blog-label">Blogs published this month</div>
+          <div class="blog-controls">
+            <button class="blog-btn" data-client="${client}" data-dir="-1">−</button>
+            <div class="blog-count mono" id="blog-count-${slug(client)}">${blogCount} / ${blogTarget}</div>
+            <button class="blog-btn" data-client="${client}" data-dir="1">+</button>
+          </div>
+        </div></div>` : '';
+      html += `
+        <div class="client-block" data-slug="${slug(client)}">
+          <div class="client-head" data-toggle-client="${slug(client)}">
+            <div><div class="client-name">${client}</div><div class="client-meta">${metaBits.join(' · ')}</div></div>
+            <div class="wk-right">
+              <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-num mono">${totalDone} / ${totalTarget} shipped</div></div>
+              <div class="chev">▸</div>
+            </div>
+          </div>
+          <div class="client-body">${note}${blogHtml}${rows}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+    container.querySelectorAll('[data-toggle-client]').forEach(h => h.addEventListener('click', () => h.closest('.client-block').classList.toggle('open')));
+    container.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        const next = nextStatus(state.posts[key] || "Planned");
+        state.posts[key] = next;
+        const col = STATUS_COLOR[next];
+        btn.textContent = next; btn.style.background = col.bg; btn.style.color = col.fg; btn.style.borderColor = col.bd;
+        await saveState();
+        updateClientBar(btn.closest('.client-block'));
+        lightRefresh();
+      });
+    });
+    container.querySelectorAll('.blog-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const client = btn.dataset.client, dir = parseInt(btn.dataset.dir,10);
+        const target = BLOG_TARGETS[client];
+        let cur = state.blogs[client] || 0;
+        cur = Math.max(0, Math.min(target, cur+dir));
+        state.blogs[client] = cur;
+        const countEl = document.getElementById('blog-count-' + slug(client));
+        if (countEl) countEl.textContent = cur + " / " + target;
+        await saveState();
+        updateClientBar(btn.closest('.client-block'));
+        lightRefresh();
+      });
+    });
+  }
+  function updateClientBar(blockEl) {
+    if (!blockEl) return;
+    const client = ["My Health","Sikkini","Man Made Marketing","Fika Time","Journey Wellness","Eshopify Fulfillment"]
+      .find(c => slug(c) === blockEl.dataset.slug);
+    if (!client) return;
+    const items = DATA[client] || [];
+    let doneCount = 0;
+    items.forEach(it => { if (state.posts[postKey(client, it.num)] === "Published") doneCount++; });
+    const postTarget = POST_TARGETS[client] || 0, blogTarget = BLOG_TARGETS[client] || 0;
+    const blogCount = state.blogs[client] || 0;
+    const totalDone = doneCount + blogCount, totalTarget = postTarget + blogTarget;
+    const pct = totalTarget ? Math.round(totalDone/totalTarget*100) : 0;
+    const fill = blockEl.querySelector('.bar-fill'), num = blockEl.querySelector('.bar-num');
+    if (fill) fill.style.width = pct + "%";
+    if (num) num.textContent = totalDone + " / " + totalTarget + " shipped";
+  }
+  function lightRefresh() {
+    document.getElementById('top-shipped').textContent = totalShipped();
+    renderStats();
+    renderChart();
+  }
+  function openClient(name) {
+    document.querySelectorAll('.client-block').forEach(c => c.classList.remove('open'));
+    const el = document.querySelector(`.client-block[data-slug="${slug(name)}"]`);
+    if (el) el.classList.add('open');
+  }
+
+  // ---------- tab switching ----------
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+  function refreshAll() {
+    document.getElementById('top-shipped').textContent = totalShipped();
+    renderStats();
+    renderChart();
+    renderClients();
+  }
+
+  (async function init() {
+    await loadState();
+    document.getElementById('top-shipped').textContent = totalShipped();
+    renderToday();
+    renderStats();
+    renderChart();
+    renderAttention();
+    renderWeekly();
+    renderClients();
+  })();
+})();
+</script>
+
+</body>
+</html>
