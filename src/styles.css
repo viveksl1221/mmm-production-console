@@ -241,10 +241,6 @@
 
 /* ===== Client page (editor) ===== */
 .client-page { display: flex; flex-direction: column; gap: 18px; }
-.draft-banner {
-  font-size: 12px; color: var(--red-dark); background: var(--red-tint);
-  border: 1px solid #FFD1CE; border-radius: var(--radius-sm); padding: 10px 14px;
-}
 .empty-state { font-size: 13px; color: var(--ink-faint); }
 .empty-state a { color: var(--red); }
 

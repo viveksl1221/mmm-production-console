@@ -13,7 +13,7 @@ import { totalShipped, totalTargets } from './lib/derived.js';
 
 function ConsoleLayout({ userId, onSignOut }) {
   const { posts, blogs, loading, setPostStatus, setBlogCount } = useProductionState(userId);
-  const content = useClientContent();
+  const content = useClientContent(userId);
 
   return (
     <div id="console-root">
@@ -26,7 +26,7 @@ function ConsoleLayout({ userId, onSignOut }) {
       <main className="main">
         <PageHeader />
         <div className="main-scroll">
-          {loading ? (
+          {loading || content.loading ? (
             <div className="loading-state">Loading…</div>
           ) : (
             <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content }} />

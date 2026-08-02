@@ -25,8 +25,35 @@ create table if not exists blog_counts (
   updated_at timestamptz not null default now()
 );
 
+-- Post content (topic/hook/etc.) — editable from the Clients pages and the
+-- Import calendar flow. Deliberately no `status` column here: a post's
+-- status lives in post_status, keyed by (client, num), not here.
+create table if not exists posts (
+  client text not null,
+  num integer not null,
+  week integer not null default 1,
+  platform text not null default '',
+  format text not null default '',
+  audience text not null default '',
+  funnel text not null default '',
+  pillar text not null default '',
+  topic text not null default '',
+  hook text not null default '',
+  breakdown text not null default '',
+  visual_direction text not null default '',
+  cta text not null default '',
+  assignee text not null default '',
+  date text not null default '',
+  notes text not null default '',
+  reference_links jsonb not null default '[]'::jsonb,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now(),
+  primary key (client, num)
+);
+
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
+alter table posts enable row level security;
 
 -- Anyone with the anon key can read everything. (Rename policies aren't
 -- required when you tighten this — see the header note — just swap the
@@ -65,6 +92,30 @@ create policy "can update blog_counts"
   using (true)
   with check (true);
 
--- Enable realtime so teammates see each other's status changes live.
+create policy "can read posts"
+  on posts for select
+  to public
+  using (true);
+
+create policy "can upsert posts"
+  on posts for insert
+  to public
+  with check (true);
+
+create policy "can update posts"
+  on posts for update
+  to public
+  using (true)
+  with check (true);
+
+-- Unlike post_status/blog_counts, posts CAN be deleted — the "remove post"
+-- button in the client editor needs it.
+create policy "can delete posts"
+  on posts for delete
+  to public
+  using (true);
+
+-- Enable realtime so teammates see each other's changes live.
 alter publication supabase_realtime add table post_status;
 alter publication supabase_realtime add table blog_counts;
+alter publication supabase_realtime add table posts;

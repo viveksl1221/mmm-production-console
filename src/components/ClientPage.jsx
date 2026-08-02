@@ -195,10 +195,6 @@ export default function ClientPage() {
 
   return (
     <div className="client-page">
-      <div className="draft-banner">
-        Edits here are saved to this session only — database sync is coming next.
-      </div>
-
       {hasB && <BlogCounter client={client} blogTarget={blogTarget} blogCount={blogCount} onBlogChange={setBlogCount} />}
 
       <div className="edit-list">
