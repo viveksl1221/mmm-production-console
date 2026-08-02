@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ALL_CLIENTS, BLOG_TARGETS, CLIENT_NOTES, DATA, POST_TARGETS } from '../data/campaign.js';
+import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
 import { postKey, slug } from '../lib/derived.js';
 
@@ -85,9 +86,12 @@ function ClientBlock({ client, posts, blogs, isOpen, onToggle, onStatusChange, o
   return (
     <div className={`client-block ${isOpen ? 'open' : ''}`} data-slug={slug(client)}>
       <div className="client-head" onClick={onToggle}>
-        <div>
-          <div className="client-name">{client}</div>
-          <div className="client-meta">{metaBits.join(' · ')}</div>
+        <div className="client-title">
+          {CLIENT_LOGOS[client] && <img className="client-logo" src={CLIENT_LOGOS[client]} alt="" />}
+          <div>
+            <div className="client-name">{client}</div>
+            <div className="client-meta">{metaBits.join(' · ')}</div>
+          </div>
         </div>
         <div className="wk-right">
           <div className="bar-wrap">
