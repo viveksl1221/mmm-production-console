@@ -20,7 +20,7 @@ function ClientBreakdownRow({ row, hasGap }) {
         {FORMAT_ORDER.filter((f) => row.counts[f] > 0).map((f) => (
           <span className={`format-pill format-${f.toLowerCase()}`} key={f}>{row.counts[f]} {f}</span>
         ))}
-        {row.blogCount > 0 && <span className="format-pill format-blog">{row.blogCount} Blog{row.blogCount > 1 ? 's' : ''}</span>}
+        {row.blogCount > 0 && <span className="format-pill format-blog">{row.blogCount} Blog Creative{row.blogCount > 1 ? 's' : ''}</span>}
         {hasGap && <span className="format-pill format-warn">+{FIKA_GAP[hasGap]} open</span>}
       </div>
       <div className="week-client-progress">

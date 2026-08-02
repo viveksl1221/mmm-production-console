@@ -34,7 +34,7 @@ export default function ClientsTab() {
 
         const metaBits = [];
         if (hasP) metaBits.push(`${items.length}/${postTarget} posts planned`);
-        if (hasB) metaBits.push(`${blogTarget} blogs`);
+        if (hasB) metaBits.push(`${blogTarget} blog creatives`);
 
         return (
           <Link to={`/clients/${slug(client)}`} className="client-block" key={client}>
@@ -51,7 +51,7 @@ export default function ClientsTab() {
                   <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
                   <div className="bar-num mono">{totalDone} / {totalTarget} shipped</div>
                 </div>
-                <div className="chev">▸</div>
+                <div className="client-open">Open <span className="chev">▸</span></div>
               </div>
             </div>
           </Link>

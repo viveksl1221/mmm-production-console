@@ -24,7 +24,7 @@ function ConsoleLayout({ userId, onSignOut }) {
         onSignOut={onSignOut}
       />
       <main className="main">
-        <PageHeader />
+        <PageHeader posts={posts} blogs={blogs} content={content} />
         <div className="main-scroll">
           {loading || content.loading ? (
             <div className="loading-state">Loading…</div>
