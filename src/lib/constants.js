@@ -8,7 +8,7 @@ export const BATCH_TASK = {
   1: { name: 'Hooks & Captions', detail: "Write copy for the week's full batch, grouped by pillar" },
   2: { name: 'Statics + Carousels', detail: 'Build all static and carousel visuals in one tool session' },
   3: { name: 'Reels', detail: 'Batch the Reel edits and exports' },
-  4: { name: 'Blog Drafts', detail: 'Protected day — the longest single-item lift' },
+  4: { name: 'Blog Creatives', detail: 'Protected day — the longest single-asset lift' },
   5: { name: 'Review & Schedule', detail: 'Client review sends, revisions, scheduling, QA' },
 };
 

@@ -60,6 +60,23 @@ export function weekClientBreakdown(w, itemsByClient, posts) {
   return rows.sort((a, b) => b.total - a.total);
 }
 
+// Ranks clients by volume of work matching `formats` within week w — biggest
+// batch first, so the batch-schedule view can say who to tackle first on a
+// given day (e.g. Tuesday = Static + Carousel).
+export function dayFormatPriority(w, itemsByClient, formats) {
+  const counts = {};
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
+      if (wkBucket(it.week) !== w) return;
+      if (!formats.includes(it.format)) return;
+      counts[client] = (counts[client] || 0) + 1;
+    });
+  });
+  return Object.entries(counts)
+    .map(([client, count]) => ({ client, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export const blogPerWeek = { 1: {}, 2: {}, 3: {}, 4: {} };
 Object.keys(BLOG_TARGETS).forEach((client) => {
   const target = BLOG_TARGETS[client];
