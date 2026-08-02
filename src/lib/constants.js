@@ -15,11 +15,11 @@ export const BATCH_TASK = {
 export const STATUSES = ['Planned', 'Drafted', 'Sent to Client', 'Scheduled', 'Published'];
 
 export const STATUS_COLOR = {
-  Planned: { bg: '#F2F2F2', fg: '#5A5A5A', bd: '#D8D8D8' },
-  Drafted: { bg: '#EFF4EF', fg: '#4B7A51', bd: '#CBE0CC' },
-  'Sent to Client': { bg: '#FBEAE7', fg: '#C0392B', bd: '#EFC3BB' },
-  Scheduled: { bg: '#F0F0F0', fg: '#333333', bd: '#CCCCCC' },
-  Published: { bg: '#E9F3EA', fg: '#2F5D34', bd: '#B9D8BC' },
+  Planned: { bg: '#F5F5F5', fg: '#5A5A5A', bd: '#E7E7E7' },
+  Drafted: { bg: '#EAF3EB', fg: '#3F7A47', bd: '#CBE0CC' },
+  'Sent to Client': { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
+  Scheduled: { bg: '#F0F0F0', fg: '#333333', bd: '#D8D8D8' },
+  Published: { bg: '#E5F0E6', fg: '#2F5D34', bd: '#B9D8BC' },
 };
 
 export function nextStatus(current) {

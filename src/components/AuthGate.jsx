@@ -25,23 +25,39 @@ export function LoginScreen() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#F4F2EE',
-        fontFamily: "'Segoe UI', Helvetica, Arial, sans-serif",
+        background: '#171717',
+        fontFamily: "'Inter', Helvetica, Arial, sans-serif",
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      {/* Brand mark motif — geometric ring from the design-language reference */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '-140px',
+          right: '-140px',
+          width: 340,
+          height: 340,
+          borderRadius: '50%',
+          border: '46px solid #FF4A4A',
+        }}
+      />
+
       <div
         style={{
           width: 380,
           background: '#FFFFFF',
-          border: '1px solid #E7E4DF',
-          borderRadius: 18,
-          padding: '32px 28px',
-          color: '#111111',
-          boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 6px 20px -10px rgba(17,17,17,0.10)',
+          borderRadius: 20,
+          padding: '34px 30px',
+          color: '#171717',
+          boxShadow: '0 20px 60px -20px rgba(0,0,0,0.5)',
+          position: 'relative',
         }}
       >
         <img src={mmmLogo} alt="Man Made Marketing" style={{ height: 26, marginBottom: 18 }} />
-        <div style={{ fontSize: 11, color: '#8A8785', marginBottom: 22 }}>Production Console · sign in to continue</div>
+        <div style={{ fontSize: 11, color: '#8A8A8A', marginBottom: 22 }}>Production Console · sign in to continue</div>
 
         {sent ? (
           <div style={{ fontSize: 13, color: '#3F7A47' }}>
@@ -59,10 +75,10 @@ export function LoginScreen() {
                 width: '100%',
                 padding: '10px 12px',
                 fontSize: 13,
-                border: '1px solid #E7E4DF',
+                border: '1px solid #E7E7E7',
                 borderRadius: 8,
                 marginBottom: 12,
-                fontFamily: "'Segoe UI', Helvetica, Arial, sans-serif",
+                fontFamily: "'Inter', Helvetica, Arial, sans-serif",
                 boxSizing: 'border-box',
               }}
             />
@@ -75,7 +91,7 @@ export function LoginScreen() {
                 fontSize: 13,
                 fontWeight: 600,
                 color: '#FFFFFF',
-                background: '#FF4040',
+                background: '#FF4A4A',
                 border: 'none',
                 borderRadius: 8,
                 cursor: sending ? 'default' : 'pointer',
@@ -84,7 +100,7 @@ export function LoginScreen() {
             >
               {sending ? 'Sending…' : 'Send magic link'}
             </button>
-            {error && <div style={{ fontSize: 11.5, color: '#FF4040', marginTop: 10 }}>{error}</div>}
+            {error && <div style={{ fontSize: 11.5, color: '#FF4A4A', marginTop: 10 }}>{error}</div>}
           </form>
         )}
       </div>

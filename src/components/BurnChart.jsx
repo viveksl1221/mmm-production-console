@@ -13,8 +13,8 @@ export default function BurnChart({ posts }) {
     const y = padT + chartH - (chartH * i) / 3;
     return (
       <g key={i}>
-        <line x1={padL} y1={y} x2={W - 16} y2={y} stroke="#EDEDED" strokeWidth="1" />
-        <text x={padL - 8} y={y + 3} fontSize="9" fill="#8A8A8A" textAnchor="end" fontFamily="Consolas, monospace">
+        <line x1={padL} y1={y} x2={W - 16} y2={y} stroke="#EFEFEF" strokeWidth="1" />
+        <text x={padL - 8} y={y + 3} fontSize="9" fill="#8A8A8A" textAnchor="end" fontFamily="Inter, sans-serif">
           {Math.round((maxTarget * i) / 3)}
         </text>
       </g>
@@ -32,23 +32,23 @@ export default function BurnChart({ posts }) {
     const isCurrent = w === cur;
     return (
       <g key={w}>
-        <rect x={x} y={y} width={barW} height={barH} rx="4" fill="none" stroke={isCurrent ? '#FF4040' : '#D8D8D8'} strokeWidth="1.5" />
-        <rect x={x} y={doneY} width={barW} height={doneH} rx="4" fill="#FF4040" />
+        <rect x={x} y={y} width={barW} height={barH} rx="5" fill="none" stroke={isCurrent ? '#FF4A4A' : '#D8D8D8'} strokeWidth="1.5" />
+        <rect x={x} y={doneY} width={barW} height={doneH} rx="5" fill="#FF4A4A" />
         <text
           x={x + barW / 2}
           y={padT + chartH + 16}
           fontSize="10"
-          fill={isCurrent ? '#FF4040' : '#5A5A5A'}
+          fill={isCurrent ? '#FF4A4A' : '#5A5A5A'}
           textAnchor="middle"
-          fontFamily="Segoe UI, sans-serif"
-          fontWeight={isCurrent ? '700' : '400'}
+          fontFamily="General Sans, Inter, sans-serif"
+          fontWeight={isCurrent ? '600' : '400'}
         >
           {WEEK_RANGES[w].label}
         </text>
-        <text x={x + barW / 2} y={y - 8} fontSize="10" fill="#111111" textAnchor="middle" fontFamily="Consolas, monospace">
+        <text x={x + barW / 2} y={y - 8} fontSize="10" fill="#171717" textAnchor="middle" fontFamily="Inter, sans-serif">
           {target}
         </text>
-        <text x={x + barW / 2} y={padT + chartH + 28} fontSize="8.5" fill="#B92C2C" textAnchor="middle" fontFamily="Consolas, monospace">
+        <text x={x + barW / 2} y={padT + chartH + 28} fontSize="8.5" fill="#C93636" textAnchor="middle" fontFamily="Inter, sans-serif">
           ~{fmtHours(weekMinutes(w))}
         </text>
       </g>
