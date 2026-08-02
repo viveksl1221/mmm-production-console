@@ -1,11 +1,13 @@
 -- MMM Production Console — schema + RLS
 -- Run this in the Supabase SQL editor for a fresh project.
 --
--- Access model: any authenticated user (magic-link sign-in) can read and
--- write both tables. There is no per-row ownership — this is a small,
--- trusted team (3-10 people) sharing one production tracker, so the goal
--- is "no public/anonymous access" and "changes are attributable to a
--- user", not per-client permission boundaries.
+-- Access model: currently open to anyone with the anon key (`to public`
+-- below), matching VITE_REQUIRE_AUTH=false in the app for now, while the
+-- project is getting stood up. Switch both back on together when ready to
+-- invite the team:
+--   1. In each policy below, change `to public` to `to authenticated`.
+--   2. Set VITE_REQUIRE_AUTH=true (or remove it) in .env / Vercel.
+--   3. Turn off public sign-up and invite teammates (see README).
 
 create table if not exists post_status (
   client text not null,
@@ -26,38 +28,40 @@ create table if not exists blog_counts (
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
 
--- Authenticated users (any signed-in teammate) can read everything.
-create policy "authenticated can read post_status"
+-- Anyone with the anon key can read everything. (Rename policies aren't
+-- required when you tighten this — see the header note — just swap the
+-- `to public` role below to `to authenticated`.)
+create policy "can read post_status"
   on post_status for select
-  to authenticated
+  to public
   using (true);
 
-create policy "authenticated can read blog_counts"
+create policy "can read blog_counts"
   on blog_counts for select
-  to authenticated
+  to public
   using (true);
 
--- Authenticated users can insert/update rows (upsert from the app).
+-- Anyone with the anon key can insert/update rows (upsert from the app).
 -- No delete policy — the app never deletes rows, only upserts.
-create policy "authenticated can upsert post_status"
+create policy "can upsert post_status"
   on post_status for insert
-  to authenticated
+  to public
   with check (true);
 
-create policy "authenticated can update post_status"
+create policy "can update post_status"
   on post_status for update
-  to authenticated
+  to public
   using (true)
   with check (true);
 
-create policy "authenticated can upsert blog_counts"
+create policy "can upsert blog_counts"
   on blog_counts for insert
-  to authenticated
+  to public
   with check (true);
 
-create policy "authenticated can update blog_counts"
+create policy "can update blog_counts"
   on blog_counts for update
-  to authenticated
+  to public
   using (true)
   with check (true);
 

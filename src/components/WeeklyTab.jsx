@@ -103,10 +103,10 @@ export default function WeeklyTab({ posts, openWeeks, setOpenWeeks, navRequest }
   }
 
   return (
-    <div className="scroll-area" id="weekly-container">
+    <>
       {[1, 2, 3, 4].map((w) => (
         <WeekCard key={w} w={w} isCurrent={w === cur} isOpen={!!openWeeks[w]} onToggle={() => toggleWeek(w)} posts={posts} />
       ))}
-    </div>
+    </>
   );
 }

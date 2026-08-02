@@ -23,6 +23,7 @@ function ItemRow({ client, item, status, onStatusChange }) {
           onStatusChange(key, nextStatus(status));
         }}
       >
+        <span className="status-dot" style={{ background: col.fg }} />
         {status}
       </button>
     </div>
@@ -127,7 +128,7 @@ export default function ClientsTab({ posts, blogs, setPostStatus, setBlogCount, 
   }
 
   return (
-    <div className="scroll-area" id="clients-container">
+    <>
       {ALL_CLIENTS.map((client) => (
         <ClientBlock
           key={client}
@@ -140,6 +141,6 @@ export default function ClientsTab({ posts, blogs, setPostStatus, setBlogCount, 
           onBlogChange={setBlogCount}
         />
       ))}
-    </div>
+    </>
   );
 }

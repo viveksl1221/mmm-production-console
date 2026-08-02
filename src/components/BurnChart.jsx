@@ -32,13 +32,13 @@ export default function BurnChart({ posts }) {
     const isCurrent = w === cur;
     return (
       <g key={w}>
-        <rect x={x} y={y} width={barW} height={barH} rx="3" fill="none" stroke={isCurrent ? '#C0392B' : '#D8D8D8'} strokeWidth="1.5" />
-        <rect x={x} y={doneY} width={barW} height={doneH} rx="3" fill="#C0392B" />
+        <rect x={x} y={y} width={barW} height={barH} rx="4" fill="none" stroke={isCurrent ? '#FF4040' : '#D8D8D8'} strokeWidth="1.5" />
+        <rect x={x} y={doneY} width={barW} height={doneH} rx="4" fill="#FF4040" />
         <text
           x={x + barW / 2}
           y={padT + chartH + 16}
           fontSize="10"
-          fill={isCurrent ? '#C0392B' : '#5A5A5A'}
+          fill={isCurrent ? '#FF4040' : '#5A5A5A'}
           textAnchor="middle"
           fontFamily="Segoe UI, sans-serif"
           fontWeight={isCurrent ? '700' : '400'}
@@ -48,7 +48,7 @@ export default function BurnChart({ posts }) {
         <text x={x + barW / 2} y={y - 8} fontSize="10" fill="#111111" textAnchor="middle" fontFamily="Consolas, monospace">
           {target}
         </text>
-        <text x={x + barW / 2} y={padT + chartH + 28} fontSize="8.5" fill="#8A2E22" textAnchor="middle" fontFamily="Consolas, monospace">
+        <text x={x + barW / 2} y={padT + chartH + 28} fontSize="8.5" fill="#B92C2C" textAnchor="middle" fontFamily="Consolas, monospace">
           ~{fmtHours(weekMinutes(w))}
         </text>
       </g>
