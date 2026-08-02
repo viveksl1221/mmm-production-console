@@ -1,10 +1,10 @@
 import { WEEK_RANGES } from '../data/campaign.js';
 import { fmtHours, getTodayInfo, weekDone, weekMinutes, weekTarget } from '../lib/derived.js';
 
-export default function BurnChart({ posts }) {
+export default function BurnChart({ posts, itemsByClient, weeklyData }) {
   const W = 640, H = 180, padL = 36, padB = 34, padT = 12;
   const chartW = W - padL - 16, chartH = H - padT - padB;
-  const maxTarget = Math.max(...[1, 2, 3, 4].map((w) => weekTarget(w))) * 1.15;
+  const maxTarget = Math.max(...[1, 2, 3, 4].map((w) => weekTarget(w, weeklyData))) * 1.15;
   const gap = chartW / 4, barW = gap * 0.5;
   const { weekNum: current } = getTodayInfo();
   const cur = current || 1;
@@ -22,8 +22,8 @@ export default function BurnChart({ posts }) {
   });
 
   const bars = [1, 2, 3, 4].map((w) => {
-    const target = weekTarget(w);
-    const done = weekDone(w, posts);
+    const target = weekTarget(w, weeklyData);
+    const done = weekDone(w, itemsByClient, posts);
     const x = padL + gap * (w - 1) + (gap - barW) / 2;
     const barH = (target / maxTarget) * chartH;
     const doneH = (done / maxTarget) * chartH;
@@ -49,7 +49,7 @@ export default function BurnChart({ posts }) {
           {target}
         </text>
         <text x={x + barW / 2} y={padT + chartH + 28} fontSize="8.5" fill="#C93636" textAnchor="middle" fontFamily="Inter, sans-serif">
-          ~{fmtHours(weekMinutes(w))}
+          ~{fmtHours(weekMinutes(w, weeklyData))}
         </text>
       </g>
     );

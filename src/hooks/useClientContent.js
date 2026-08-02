@@ -160,5 +160,5 @@ export function useClientContent(userId) {
     await supabase.from('posts').upsert(rows);
   }
 
-  return { getItems, updateItem, addItem, removeItem, importItems, loading };
+  return { getItems, updateItem, addItem, removeItem, importItems, loading, itemsByClient };
 }

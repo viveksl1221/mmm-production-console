@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ATTENTION_NOTES, WEEK_RANGES } from '../data/campaign.js';
 import { fmtHours, slug, weekMinutes } from '../lib/derived.js';
 
-export default function AttentionList() {
+export default function AttentionList({ weeklyData }) {
   const navigate = useNavigate();
   const rows = [];
 
@@ -16,11 +16,11 @@ export default function AttentionList() {
   });
 
   [1, 2, 3, 4].forEach((w) => {
-    if (weekMinutes(w) / 60 > 32) {
+    if (weekMinutes(w, weeklyData) / 60 > 32) {
       rows.push(
         <div className="attn-row" key={`week-${w}`}>
           <div className="t">
-            {WEEK_RANGES[w].label} runs <b>~{fmtHours(weekMinutes(w))}</b> of production — plan the extra time
+            {WEEK_RANGES[w].label} runs <b>~{fmtHours(weekMinutes(w, weeklyData))}</b> of production — plan the extra time
           </div>
           <div className="go" onClick={() => navigate('/weekly', { state: { openWeek: w } })}>Open →</div>
         </div>

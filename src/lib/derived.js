@@ -1,8 +1,10 @@
-// Pure calculations derived from the campaign data. Ported as-is from the
-// offline prototype — only reshaped so `posts`/`blogs` state is passed in
-// as arguments instead of read off a shared global object.
+// Pure calculations derived from live post content + status. Originally
+// ported from the offline prototype against the static campaign.js DATA;
+// now computed from itemsByClient (the Supabase-backed content) so the
+// numbers stay accurate as posts are added/edited/imported, not frozen to
+// whatever campaign.js looked like at seed time.
 
-import { DATA, POST_TARGETS, BLOG_TARGETS, FIKA_GAP, CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX } from '../data/campaign.js';
+import { POST_TARGETS, BLOG_TARGETS, FIKA_GAP, CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX } from '../data/campaign.js';
 import { TIME_MIN } from './constants.js';
 
 export function wkBucket(w) {
@@ -18,15 +20,45 @@ export function fmtHours(min) {
   return (min / 60).toFixed(1) + 'h';
 }
 
-// Weekly format/client breakdown, computed once from the static campaign data.
-export const weekly = { 1: { Static: 0, Carousel: 0, Reel: 0, clients: {} }, 2: { Static: 0, Carousel: 0, Reel: 0, clients: {} }, 3: { Static: 0, Carousel: 0, Reel: 0, clients: {} }, 4: { Static: 0, Carousel: 0, Reel: 0, clients: {} } };
-Object.keys(POST_TARGETS).forEach((client) => {
-  (DATA[client] || []).forEach((it) => {
-    const w = wkBucket(it.week);
-    weekly[w][it.format] = (weekly[w][it.format] || 0) + 1;
-    weekly[w].clients[client] = (weekly[w].clients[client] || 0) + 1;
+// Weekly format/client breakdown, computed fresh from live content.
+// Shape: { [week]: { Static, Carousel, Reel, clients: { [client]: { Static, Carousel, Reel, total } } } }
+export function computeWeekly(itemsByClient) {
+  const weekly = {
+    1: { Static: 0, Carousel: 0, Reel: 0, clients: {} },
+    2: { Static: 0, Carousel: 0, Reel: 0, clients: {} },
+    3: { Static: 0, Carousel: 0, Reel: 0, clients: {} },
+    4: { Static: 0, Carousel: 0, Reel: 0, clients: {} },
+  };
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
+      const w = wkBucket(it.week);
+      if (!weekly[w]) return;
+      weekly[w][it.format] = (weekly[w][it.format] || 0) + 1;
+      const c = (weekly[w].clients[client] ||= { Static: 0, Carousel: 0, Reel: 0, total: 0 });
+      c[it.format] = (c[it.format] || 0) + 1;
+      c.total += 1;
+    });
   });
-});
+  return weekly;
+}
+
+// Per-client detail for one week — the "who's doing what" breakdown used by
+// the Weekly Plan page. Sorted by post count, busiest client first.
+export function weekClientBreakdown(w, itemsByClient, posts) {
+  const rows = [];
+  Object.keys(itemsByClient).forEach((client) => {
+    const items = (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w);
+    if (!items.length) return;
+    const counts = { Static: 0, Carousel: 0, Reel: 0 };
+    let done = 0;
+    items.forEach((it) => {
+      counts[it.format] = (counts[it.format] || 0) + 1;
+      if ((posts[postKey(client, it.num)] || 'Planned') === 'Published') done++;
+    });
+    rows.push({ client, counts, total: items.length, done, blogCount: (BLOG_TARGETS[client] !== undefined ? weekBlogTotalForClient(w, client) : 0) });
+  });
+  return rows.sort((a, b) => b.total - a.total);
+}
 
 export const blogPerWeek = { 1: {}, 2: {}, 3: {}, 4: {} };
 Object.keys(BLOG_TARGETS).forEach((client) => {
@@ -39,28 +71,32 @@ Object.keys(BLOG_TARGETS).forEach((client) => {
   }
 });
 
+function weekBlogTotalForClient(w, client) {
+  return blogPerWeek[w][client] || 0;
+}
+
 export function weekBlogTotal(w) {
   return Object.values(blogPerWeek[w]).reduce((a, b) => a + b, 0);
 }
-export function weekPostTotal(w) {
-  const f = weekly[w];
+export function weekPostTotal(w, weeklyData) {
+  const f = weeklyData[w];
   return (f.Static || 0) + (f.Carousel || 0) + (f.Reel || 0) + (FIKA_GAP[w] || 0);
 }
-export function weekTarget(w) {
-  return weekPostTotal(w) + weekBlogTotal(w);
+export function weekTarget(w, weeklyData) {
+  return weekPostTotal(w, weeklyData) + weekBlogTotal(w);
 }
-export function weekMinutes(w) {
-  const f = weekly[w];
+export function weekMinutes(w, weeklyData) {
+  const f = weeklyData[w];
   let m = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel + (f.Reel || 0) * TIME_MIN.Reel;
   m += weekBlogTotal(w) * TIME_MIN.Blog;
   m += (FIKA_GAP[w] || 0) * TIME_MIN.Gap;
   return m;
 }
 
-export function weekDone(w, posts) {
+export function weekDone(w, itemsByClient, posts) {
   let done = 0;
-  Object.keys(POST_TARGETS).forEach((client) => {
-    (DATA[client] || []).forEach((it) => {
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
       if (wkBucket(it.week) !== w) return;
       if (posts[postKey(client, it.num)] === 'Published') done++;
     });
