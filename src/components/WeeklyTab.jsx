@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import { FIKA_GAP, WEEK_RANGES } from '../data/campaign.js';
 import { TIME_MIN } from '../lib/constants.js';
 import { blogPerWeek, fmtHours, getTodayInfo, weekBlogTotal, weekDone, weekMinutes, weekPostTotal, weekTarget, weekly } from '../lib/derived.js';
@@ -82,21 +83,19 @@ function WeekCard({ w, isCurrent, isOpen, onToggle, posts }) {
   );
 }
 
-export default function WeeklyTab({ posts, openWeeks, setOpenWeeks, navRequest }) {
+export default function WeeklyTab() {
+  const { posts } = useOutletContext();
+  const location = useLocation();
   const { weekNum: current } = getTodayInfo();
   const cur = current || 1;
+  const [openWeeks, setOpenWeeks] = useState({ [cur]: true });
 
   useEffect(() => {
-    setOpenWeeks({ [cur]: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (navRequest?.type === 'week') {
-      setOpenWeeks({ [navRequest.week]: true });
+    if (location.state?.openWeek) {
+      setOpenWeeks({ [location.state.openWeek]: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navRequest]);
+  }, [location.state]);
 
   function toggleWeek(w) {
     setOpenWeeks((prev) => ({ ...prev, [w]: !prev[w] }));

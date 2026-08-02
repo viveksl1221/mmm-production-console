@@ -1,70 +1,35 @@
-import { useState } from 'react';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { LoginScreen } from './components/AuthGate.jsx';
+import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
 import OverviewTab from './components/OverviewTab.jsx';
 import PageHeader from './components/PageHeader.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import WeeklyTab from './components/WeeklyTab.jsx';
 import { useAuth } from './hooks/useAuth.js';
+import { useClientContent } from './hooks/useClientContent.js';
 import { useProductionState } from './hooks/useProductionState.js';
 import { totalShipped, totalTargets } from './lib/derived.js';
 
-function Console({ userId, onSignOut }) {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [openWeeks, setOpenWeeks] = useState({});
-  const [openClients, setOpenClients] = useState({});
-  const [navRequest, setNavRequest] = useState(null);
+function ConsoleLayout({ userId, onSignOut }) {
   const { posts, blogs, loading, setPostStatus, setBlogCount } = useProductionState(userId);
-
-  function gotoWeek(w) {
-    setActiveTab('weekly');
-    setNavRequest({ type: 'week', week: w, at: Date.now() });
-  }
-  function gotoClient(name) {
-    setActiveTab('clients');
-    setNavRequest({ type: 'client', client: name, at: Date.now() });
-  }
+  const content = useClientContent();
 
   return (
     <div id="console-root">
       <Sidebar
-        active={activeTab}
-        onChange={setActiveTab}
         shipped={totalShipped(posts, blogs)}
         target={totalTargets()}
         showSignOut={!!onSignOut}
         onSignOut={onSignOut}
       />
       <main className="main">
-        <PageHeader active={activeTab} />
+        <PageHeader />
         <div className="main-scroll">
           {loading ? (
             <div className="loading-state">Loading…</div>
           ) : (
-            <>
-              {activeTab === 'overview' && (
-                <OverviewTab posts={posts} blogs={blogs} onGotoWeek={gotoWeek} onGotoClient={gotoClient} />
-              )}
-              {activeTab === 'weekly' && (
-                <WeeklyTab
-                  posts={posts}
-                  openWeeks={openWeeks}
-                  setOpenWeeks={setOpenWeeks}
-                  navRequest={navRequest?.type === 'week' ? navRequest : null}
-                />
-              )}
-              {activeTab === 'clients' && (
-                <ClientsTab
-                  posts={posts}
-                  blogs={blogs}
-                  setPostStatus={setPostStatus}
-                  setBlogCount={setBlogCount}
-                  openClients={openClients}
-                  setOpenClients={setOpenClients}
-                  navRequest={navRequest?.type === 'client' ? navRequest : null}
-                />
-              )}
-            </>
+            <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content }} />
           )}
         </div>
       </main>
@@ -80,12 +45,23 @@ const AUTH_REQUIRED = import.meta.env.VITE_REQUIRE_AUTH !== 'false';
 export default function App() {
   const { session, loading, signOut } = useAuth();
 
-  if (!AUTH_REQUIRED) {
-    return <Console userId={session?.user?.id ?? null} onSignOut={null} />;
+  if (AUTH_REQUIRED) {
+    if (loading) return null;
+    if (!session) return <LoginScreen />;
   }
 
-  if (loading) return null;
-  if (!session) return <LoginScreen />;
+  const userId = AUTH_REQUIRED ? session.user.id : (session?.user?.id ?? null);
+  const onSignOut = AUTH_REQUIRED ? signOut : null;
 
-  return <Console userId={session.user.id} onSignOut={signOut} />;
+  return (
+    <Routes>
+      <Route path="/" element={<ConsoleLayout userId={userId} onSignOut={onSignOut} />}>
+        <Route index element={<OverviewTab />} />
+        <Route path="weekly" element={<WeeklyTab />} />
+        <Route path="clients" element={<ClientsTab />} />
+        <Route path="clients/:clientSlug" element={<ClientPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
 }

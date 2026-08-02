@@ -1,12 +1,13 @@
+import { NavLink } from 'react-router-dom';
 import mmmLogo from '../assets/mmmlogo.png';
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'weekly', label: 'Weekly Plan' },
-  { id: 'clients', label: 'Clients' },
+  { to: '/', label: 'Overview', end: true },
+  { to: '/weekly', label: 'Weekly Plan' },
+  { to: '/clients', label: 'Clients' },
 ];
 
-export default function Sidebar({ active, onChange, shipped, target, showSignOut, onSignOut }) {
+export default function Sidebar({ shipped, target, showSignOut, onSignOut }) {
   const pct = target ? Math.round((shipped / target) * 100) : 0;
 
   return (
@@ -18,13 +19,14 @@ export default function Sidebar({ active, onChange, shipped, target, showSignOut
 
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            className={`nav-item ${active === item.id ? 'active' : ''}`}
-            onClick={() => onChange(item.id)}
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           >
             {item.label}
-          </button>
+          </NavLink>
         ))}
       </nav>
 
