@@ -121,6 +121,37 @@ export function weekDone(w, itemsByClient, posts) {
   return done;
 }
 
+// Items remaining, broken out by category — posts by format (not yet
+// Published), blog creatives (target minus published count per client), and
+// "not yet planned" for target slots with no post created yet at all (e.g.
+// Fika Time's open weeks) — those have no format to bucket into, but still
+// count toward the total so this breakdown sums to the same number as the
+// plain target-based "items remaining" stat.
+export function remainingBreakdown(itemsByClient, posts, blogs) {
+  const counts = { Carousel: 0, Static: 0, Reel: 0 };
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
+      const status = posts[postKey(client, it.num)] || 'Planned';
+      if (status !== 'Published') {
+        counts[it.format] = (counts[it.format] || 0) + 1;
+      }
+    });
+  });
+
+  let notYetPlanned = 0;
+  Object.keys(POST_TARGETS).forEach((client) => {
+    const have = (itemsByClient[client] || []).length;
+    notYetPlanned += Math.max(0, POST_TARGETS[client] - have);
+  });
+
+  let blogRemaining = 0;
+  Object.keys(BLOG_TARGETS).forEach((client) => {
+    blogRemaining += Math.max(0, BLOG_TARGETS[client] - (blogs[client] || 0));
+  });
+
+  return { ...counts, 'Not Yet Planned': notYetPlanned, 'Blog Creative': blogRemaining };
+}
+
 export function totalTargets() {
   let t = 0;
   Object.values(POST_TARGETS).forEach((v) => (t += v));

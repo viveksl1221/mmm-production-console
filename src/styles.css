@@ -131,6 +131,8 @@
 }
 .stat-card .n { font-family: var(--font-heading); font-size: 27px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
 .stat-card .l { font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+.stat-card-remaining { display: flex; flex-direction: column; }
+.stat-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 
 /* ===== Today card ===== */
 .today-card {
