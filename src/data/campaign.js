@@ -34,11 +34,12 @@ export const ALL_CLIENTS = [
   'Sikkini',
   'Man Made Marketing',
   'Fika Time',
+  'Fika Time Sushi',
   'Journey Wellness',
   'Eshopify Fulfillment',
 ];
 
-export const POST_TARGETS = { 'My Health': 20, Sikkini: 30, 'Man Made Marketing': 15, 'Fika Time': 15 };
+export const POST_TARGETS = { 'My Health': 20, Sikkini: 30, 'Man Made Marketing': 15, 'Fika Time': 15, 'Fika Time Sushi': 10 };
 export const BLOG_TARGETS = { 'My Health': 8, 'Journey Wellness': 8, Sikkini: 8, 'Man Made Marketing': 7, 'Eshopify Fulfillment': 8 };
 
 // Weeks where a client has planned slots with no topic locked yet
