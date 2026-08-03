@@ -10,6 +10,7 @@ export const CLIENT_LOGOS = {
   Sikkini: sikkini,
   'Man Made Marketing': mmm,
   'Fika Time': fikaTime,
+  'Fika Time Sushi': fikaTime,
   'Journey Wellness': jwc,
   'Eshopify Fulfillment': eshopify,
 };
