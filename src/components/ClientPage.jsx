@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
+import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 
@@ -273,7 +274,18 @@ export default function ClientPage() {
             ))}
           </div>
 
-          <button className="add-post-btn" onClick={() => content.addItem(client)}>+ Add post</button>
+          <div className="edit-toolbar">
+            <button className="add-post-btn" onClick={() => content.addItem(client)}>+ Add post</button>
+            <button
+              className="add-post-btn"
+              onClick={() => {
+                const csv = itemsToCSV([[client, items]], (c, num) => posts[postKey(c, num)] || 'Planned', false);
+                downloadCSV(`${slug(client)}-content-calendar.csv`, csv);
+              }}
+            >
+              Export CSV
+            </button>
+          </div>
         </>
       )}
 

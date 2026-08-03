@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
+import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
 import ImportModal from './ImportModal.jsx';
 
@@ -9,9 +10,16 @@ export default function ClientsTab() {
   const { posts, blogs, content, setPostStatus } = useOutletContext();
   const [importOpen, setImportOpen] = useState(false);
 
+  function exportAll() {
+    const pairs = ALL_CLIENTS.map((c) => [c, content.getItems(c)]).filter(([, items]) => items.length);
+    const csv = itemsToCSV(pairs, (c, num) => posts[postKey(c, num)] || 'Planned', true);
+    downloadCSV('all-clients-content-calendar.csv', csv);
+  }
+
   return (
     <>
       <div className="clients-toolbar">
+        <button className="add-post-btn" onClick={exportAll}>Export all</button>
         <button className="add-post-btn" onClick={() => setImportOpen(true)}>Import calendar</button>
       </div>
 

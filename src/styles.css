@@ -418,6 +418,7 @@
   padding: 9px 16px; cursor: pointer; transition: border-color .15s ease, color .15s ease;
 }
 .add-post-btn:hover { border-color: var(--red); color: var(--red); }
+.edit-toolbar { display: flex; gap: 10px; }
 
 @media (max-width: 900px) {
   .edit-list-head { display: none; }
@@ -452,7 +453,7 @@
 }
 
 /* ===== Clients toolbar + Import modal ===== */
-.clients-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.clients-toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 14px; }
 
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(23,23,23,0.45);
