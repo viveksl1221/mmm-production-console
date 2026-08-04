@@ -223,7 +223,9 @@ a.today-group-name:hover { color: var(--red); }
 }
 .today-row-logo { width: 30px; height: 30px; border-radius: 8px; object-fit: cover; border: 1px solid var(--rule); flex-shrink: 0; background: #fff; }
 .today-row-body { flex: 1; min-width: 0; }
-.today-row-topic { font-size: 13px; }
+.today-row-body-clickable { cursor: pointer; }
+.today-row-body-clickable:hover .today-row-topic { color: var(--red); }
+.today-row-topic { font-size: 13px; transition: color .15s ease; }
 .today-row-hook { font-size: 11.5px; color: var(--ink-faint); font-style: italic; margin-top: 2px; }
 
 .today-row-timer { flex-shrink: 0; text-align: right; }
@@ -521,6 +523,19 @@ a.today-group-name:hover { color: var(--red); }
 .detail-field { display: block; }
 .detail-label { display: block; font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin-bottom: 4px; }
 .detail-field .edit-input, .detail-field .edit-textarea { border-color: var(--rule); background: #fff; }
+
+.detail-view-top { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.detail-view-hook { font-size: 14px; font-style: italic; color: var(--ink-dim); margin-bottom: 18px; line-height: 1.5; }
+.detail-view-value { font-size: 13px; color: var(--ink); }
+.detail-view-notes { white-space: pre-wrap; line-height: 1.5; }
+.detail-view-refs { display: flex; flex-direction: column; gap: 4px; }
+.detail-view-ref { font-size: 12.5px; color: var(--red-dark); text-decoration: none; word-break: break-all; }
+.detail-view-ref:hover { text-decoration: underline; }
+.detail-view-edit-link {
+  display: inline-block; margin-top: 20px; font-size: 12px; font-weight: 700; color: var(--red-dark);
+  text-decoration: none;
+}
+.detail-view-edit-link:hover { color: var(--red); }
 .edit-textarea {
   width: 100%; font-size: 12.5px; font-family: var(--font-body); color: var(--ink);
   border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; background: #fff;
@@ -602,6 +617,7 @@ a.today-group-name:hover { color: var(--red); }
   padding: 20px 24px; border-bottom: 1px solid var(--rule);
 }
 .modal-title { font-family: var(--font-heading); font-size: 16px; font-weight: 600; }
+.modal-subtitle { font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; }
 .modal-close {
   width: 28px; height: 28px; border-radius: 8px; border: none; background: none;
   font-size: 18px; color: var(--ink-faint); cursor: pointer;

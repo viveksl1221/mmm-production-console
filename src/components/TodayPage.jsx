@@ -5,8 +5,9 @@ import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { BATCH_TASK, DAILY_STATUS_COLOR, DAILY_STATUS_LABEL } from '../lib/constants.js';
 import {
-  blogProgressKey, fmtClock, fmtHours, getTodayInfo, slug, todaysBlogTasks, todaysCounts, todaysItems,
+  blogProgressKey, fmtClock, fmtHours, getTodayInfo, postKey, slug, todaysBlogTasks, todaysCounts, todaysItems,
 } from '../lib/derived.js';
+import PostDetailModal from './PostDetailModal.jsx';
 
 function liveElapsedSeconds(entry) {
   if (!entry) return 0;
@@ -14,7 +15,7 @@ function liveElapsedSeconds(entry) {
   return entry.elapsedSeconds;
 }
 
-function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart, onPause, onComplete, onReset }) {
+function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart, onPause, onComplete, onReset, onOpenDetail }) {
   const status = entry?.status || 'not_started';
   const running = status === 'in_progress' && !!entry?.startedAt;
   const elapsed = liveElapsedSeconds(entry);
@@ -26,7 +27,7 @@ function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart
   return (
     <div className="today-row">
       {CLIENT_LOGOS[client] && <img className="today-row-logo" src={CLIENT_LOGOS[client]} alt="" />}
-      <div className="today-row-body">
+      <div className={`today-row-body${onOpenDetail ? ' today-row-body-clickable' : ''}`} onClick={onOpenDetail}>
         <div className="today-row-topic">{title}</div>
         {subtitle && <div className="today-row-hook">{subtitle}</div>}
       </div>
@@ -83,9 +84,10 @@ function ClientGroup({ client, linkTo, children }) {
 }
 
 export default function TodayPage() {
-  const { userId, content } = useOutletContext();
+  const { userId, content, posts } = useOutletContext();
   const { weekday, weekNum, isoDate } = getTodayInfo();
   const { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem } = useDailyProgress(isoDate, userId);
+  const [detailFor, setDetailFor] = useState(null);
 
   // Forces a re-render every second so running timers visibly tick — only
   // costs anything while this page is mounted and someone has a clock going.
@@ -181,6 +183,7 @@ export default function TodayPage() {
                 onPause={() => pauseTimer(client, item.num)}
                 onComplete={() => completeItem(client, item.num)}
                 onReset={() => resetItem(client, item.num)}
+                onOpenDetail={() => setDetailFor({ client, item })}
               />
             );
           })}
@@ -207,6 +210,15 @@ export default function TodayPage() {
             );
           })}
         </ClientGroup>
+      )}
+
+      {detailFor && (
+        <PostDetailModal
+          client={detailFor.client}
+          item={detailFor.item}
+          status={posts[postKey(detailFor.client, detailFor.item.num)] || 'Planned'}
+          onClose={() => setDetailFor(null)}
+        />
       )}
     </>
   );
