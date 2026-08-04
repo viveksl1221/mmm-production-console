@@ -26,3 +26,19 @@ export function nextStatus(current) {
   const i = STATUSES.indexOf(current);
   return STATUSES[(i + 1) % STATUSES.length];
 }
+
+// Daily checklist progress (/today page) — a separate, simpler tracker from
+// the content pipeline above. Colors are deliberately reused from
+// STATUS_COLOR (Planned/Sent to Client/Published) rather than introducing
+// new ones, keeping the palette consistent app-wide.
+export const DAILY_STATUS_LABEL = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+};
+
+export const DAILY_STATUS_COLOR = {
+  not_started: { bg: '#F5F5F5', fg: '#5A5A5A', bd: '#E7E7E7' },
+  in_progress: { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
+  completed: { bg: '#E5F0E6', fg: '#2F5D34', bd: '#B9D8BC' },
+};

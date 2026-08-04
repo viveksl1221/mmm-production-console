@@ -17,7 +17,23 @@ export function slug(s) {
   return s.replace(/[^a-z0-9]/gi, '-').toLowerCase();
 }
 export function fmtHours(min) {
-  return (min / 60).toFixed(1) + 'h';
+  const total = Math.round(min);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+// mm:ss (or h:mm:ss past an hour) for a live-ticking timer readout.
+export function fmtClock(sec) {
+  const s = Math.max(0, Math.round(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const mm = String(m).padStart(2, '0');
+  const ssPad = String(ss).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ssPad}` : `${m}:${ssPad}`;
 }
 
 // Weekly format/client breakdown, computed fresh from live content.
@@ -183,5 +199,34 @@ export function getTodayInfo() {
     else if (day <= 23) weekNum = 3;
     else weekNum = 4;
   }
-  return { weekday, weekNum, dateStr: now.toDateString() };
+  const isoDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return { weekday, weekNum, dateStr: now.toDateString(), isoDate };
+}
+
+// The individual items due for today's batch task, grouped by client.
+// Monday (all formats) and Friday (review) both cover the week's full set;
+// Tuesday/Wednesday are format-filtered. Thursday has no item list — blog
+// creatives aren't individually tracked — see todaysBlogTasks instead.
+export function todaysItems(itemsByClient, weekNum, weekday) {
+  if (!weekNum || weekday === 0 || weekday === 6 || weekday === 4) return [];
+  const formats = weekday === 2 ? ['Static', 'Carousel'] : weekday === 3 ? ['Reel'] : null; // null = all formats (Mon/Fri)
+  const rows = [];
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
+      if (wkBucket(it.week) !== weekNum) return;
+      if (formats && !formats.includes(it.format)) return;
+      rows.push({ client, item: it, timeMin: TIME_MIN[it.format] || 0 });
+    });
+  });
+  return rows.sort((a, b) => a.client.localeCompare(b.client) || a.item.num - b.item.num);
+}
+
+// Thursday only: per-client blog creative counts due this week (no
+// individual item records exist for blogs, so this is count-based).
+export function todaysBlogTasks(weekNum) {
+  if (!weekNum || !blogPerWeek[weekNum]) return [];
+  return Object.entries(blogPerWeek[weekNum])
+    .filter(([, count]) => count > 0)
+    .map(([client, count]) => ({ client, count, timeMin: count * TIME_MIN.Blog }))
+    .sort((a, b) => b.count - a.count);
 }

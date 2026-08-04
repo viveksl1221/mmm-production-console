@@ -51,9 +51,30 @@ create table if not exists posts (
   primary key (client, num)
 );
 
+-- Daily task tracker: a lightweight "did I touch this today" marker for the
+-- /today checklist, kept separate from the post_status content pipeline.
+-- Scoped by work_date so each day's checklist starts fresh.
+-- started_at is set while a timer is actively running and cleared on
+-- pause/complete/reset, with the running duration folded into
+-- elapsed_seconds at that point — this lets elapsed time be reconstructed
+-- without a background job (elapsed_seconds, plus now() - started_at if
+-- a timer is currently running).
+create table if not exists daily_progress (
+  client text not null,
+  num integer not null,
+  work_date date not null,
+  status text not null default 'not_started',
+  started_at timestamptz,
+  elapsed_seconds integer not null default 0,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now(),
+  primary key (client, num, work_date)
+);
+
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
 alter table posts enable row level security;
+alter table daily_progress enable row level security;
 
 -- Anyone with the anon key can read everything. (Rename policies aren't
 -- required when you tighten this — see the header note — just swap the
@@ -115,7 +136,24 @@ create policy "can delete posts"
   to public
   using (true);
 
+create policy "can read daily_progress"
+  on daily_progress for select
+  to public
+  using (true);
+
+create policy "can upsert daily_progress"
+  on daily_progress for insert
+  to public
+  with check (true);
+
+create policy "can update daily_progress"
+  on daily_progress for update
+  to public
+  using (true)
+  with check (true);
+
 -- Enable realtime so teammates see each other's changes live.
 alter publication supabase_realtime add table post_status;
 alter publication supabase_realtime add table blog_counts;
 alter publication supabase_realtime add table posts;
+alter publication supabase_realtime add table daily_progress;

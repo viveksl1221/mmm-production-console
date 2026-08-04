@@ -5,6 +5,7 @@ import ClientsTab from './components/ClientsTab.jsx';
 import OverviewTab from './components/OverviewTab.jsx';
 import PageHeader from './components/PageHeader.jsx';
 import Sidebar from './components/Sidebar.jsx';
+import TodayPage from './components/TodayPage.jsx';
 import WeeklyTab from './components/WeeklyTab.jsx';
 import { useAuth } from './hooks/useAuth.js';
 import { useClientContent } from './hooks/useClientContent.js';
@@ -29,7 +30,7 @@ function ConsoleLayout({ userId, onSignOut }) {
           {loading || content.loading ? (
             <div className="loading-state">Loading…</div>
           ) : (
-            <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content }} />
+            <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content, userId }} />
           )}
         </div>
       </main>
@@ -57,6 +58,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<ConsoleLayout userId={userId} onSignOut={onSignOut} />}>
         <Route index element={<OverviewTab />} />
+        <Route path="today" element={<TodayPage />} />
         <Route path="weekly" element={<WeeklyTab />} />
         <Route path="clients" element={<ClientsTab />} />
         <Route path="clients/:clientSlug" element={<ClientPage />} />

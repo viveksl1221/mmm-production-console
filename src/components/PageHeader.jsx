@@ -18,6 +18,8 @@ const COPY = {
   '/clients': { title: 'Clients', subtitle: 'Every post and blog creative, by client' },
 };
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 export default function PageHeader({ posts, blogs, content }) {
   const location = useLocation();
   const { clientSlug } = useParams();
@@ -43,6 +45,16 @@ export default function PageHeader({ posts, blogs, content }) {
             <div className="page-subtitle">Content Calendar{metaBits.length ? ` · ${metaBits.join(' · ')}` : ''}</div>
           </div>
         </div>
+      </header>
+    );
+  }
+
+  if (location.pathname === '/today') {
+    return (
+      <header className="main-header">
+        <Link to="/" className="page-breadcrumb">← Overview</Link>
+        <h1 className="page-title">{WEEKDAY_NAMES[new Date().getDay()]}'s Batch</h1>
+        <div className="page-subtitle">Everything due today, in one checklist</div>
       </header>
     );
   }

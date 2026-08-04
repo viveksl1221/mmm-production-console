@@ -1,8 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { WEEK_RANGES } from '../data/campaign.js';
 import { BATCH_TASK } from '../lib/constants.js';
 import { getTodayInfo } from '../lib/derived.js';
 
 export default function TodayCard() {
+  const navigate = useNavigate();
   const { weekday, weekNum } = getTodayInfo();
 
   if (!weekNum) {
@@ -26,10 +28,11 @@ export default function TodayCard() {
 
   const task = BATCH_TASK[weekday];
   return (
-    <div className="today-card">
+    <div className="today-card today-card-clickable" onClick={() => navigate('/today')}>
       <div className="today-eyebrow">{WEEK_RANGES[weekNum].label} · Today's batch</div>
       <div className="today-title">{task.name}</div>
       <div className="today-detail">{task.detail}</div>
+      <div className="today-cta">View today's checklist →</div>
     </div>
   );
 }
