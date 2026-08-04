@@ -3,7 +3,7 @@ import { LoginScreen } from './components/AuthGate.jsx';
 import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
 import CommentsPage from './components/CommentsPage.jsx';
-import FeedbackRail from './components/FeedbackRail.jsx';
+import FeedbackWidget from './components/FeedbackWidget.jsx';
 import OverviewTab from './components/OverviewTab.jsx';
 import PageHeader from './components/PageHeader.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -18,7 +18,7 @@ function ConsoleLayout({ userId, onSignOut }) {
   const { posts, blogs, loading, setPostStatus, setBlogCount } = useProductionState(userId);
   const content = useClientContent(userId);
   const location = useLocation();
-  const showFeedbackRail = location.pathname !== '/comments';
+  const showFeedbackWidget = location.pathname !== '/comments';
 
   return (
     <div id="console-root">
@@ -30,17 +30,15 @@ function ConsoleLayout({ userId, onSignOut }) {
       />
       <main className="main">
         <PageHeader posts={posts} blogs={blogs} content={content} />
-        <div className="main-body">
-          <div className="main-scroll">
-            {loading || content.loading ? (
-              <div className="loading-state">Loading…</div>
-            ) : (
-              <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content, userId }} />
-            )}
-          </div>
-          {showFeedbackRail && <FeedbackRail userId={userId} />}
+        <div className="main-scroll">
+          {loading || content.loading ? (
+            <div className="loading-state">Loading…</div>
+          ) : (
+            <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content, userId }} />
+          )}
         </div>
       </main>
+      {showFeedbackWidget && <FeedbackWidget userId={userId} />}
     </div>
   );
 }
