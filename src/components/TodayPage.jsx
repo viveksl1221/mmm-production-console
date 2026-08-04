@@ -119,10 +119,14 @@ export default function TodayPage() {
   const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, weekNum, weekday);
   const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
 
-  const totalCount = postRows.length + blogRows.length;
-  const completedCount =
-    postRows.filter((r) => (progressByKey[`${r.client}::${r.item.num}`]?.status || 'not_started') === 'completed').length +
-    blogRows.filter((r) => (progressByKey[`${blogProgressKey(r.client)}::0`]?.status || 'not_started') === 'completed').length;
+  const allStatuses = [
+    ...postRows.map((r) => progressByKey[`${r.client}::${r.item.num}`]?.status || 'not_started'),
+    ...blogRows.map((r) => progressByKey[`${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
+  ];
+  const totalCount = allStatuses.length;
+  const completedCount = allStatuses.filter((s) => s === 'completed').length;
+  const inProgressCount = allStatuses.filter((s) => s === 'in_progress').length;
+  const pendingCount = allStatuses.filter((s) => s === 'not_started').length;
   const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
   const loggedSeconds =
     postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${r.client}::${r.item.num}`]), 0) +
@@ -135,16 +139,38 @@ export default function TodayPage() {
   return (
     <>
       <div className="today-summary">
-        <div className="today-summary-task">
-          <div className="today-summary-name">{task.name}</div>
-          <div className="today-summary-detail">{task.detail}</div>
-        </div>
-        <div className="today-summary-progress">
-          <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-          <div className="bar-num mono">
-            {completedCount}/{totalCount} done · logged {fmtHours(Math.round(loggedSeconds / 60))} of ~{fmtHours(totalMinutes)} budget
+        <div className="today-summary-top">
+          <div className="today-summary-task">
+            <div className="today-summary-name">{task.name}</div>
+            <div className="today-summary-detail">{task.detail}</div>
+          </div>
+          <div className="today-summary-progress">
+            <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+            <div className="bar-num mono">
+              logged {fmtHours(Math.round(loggedSeconds / 60))} of ~{fmtHours(totalMinutes)} budget
+            </div>
           </div>
         </div>
+        {totalCount > 0 && (
+          <div className="today-summary-stats">
+            <div className="today-stat today-stat-done">
+              <span className="today-stat-n mono">{completedCount}</span>
+              <span className="today-stat-l">Done</span>
+            </div>
+            <div className="today-stat today-stat-progress">
+              <span className="today-stat-n mono">{inProgressCount}</span>
+              <span className="today-stat-l">In Progress</span>
+            </div>
+            <div className="today-stat today-stat-pending">
+              <span className="today-stat-n mono">{pendingCount}</span>
+              <span className="today-stat-l">Pending</span>
+            </div>
+            <div className="today-stat today-stat-total">
+              <span className="today-stat-n mono">{totalCount}</span>
+              <span className="today-stat-l">Total</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {totalCount === 0 && <div className="empty-state">Nothing scheduled for today's task type this week.</div>}

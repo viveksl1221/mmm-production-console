@@ -191,13 +191,20 @@
 .today-summary {
   background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--radius-md);
   box-shadow: var(--shadow-card); padding: 20px 22px; margin-bottom: 22px;
-  display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;
 }
+.today-summary-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
 .today-summary-name { font-family: var(--font-heading); font-size: 18px; font-weight: 600; }
 .today-summary-detail { font-size: 12.5px; color: var(--ink-faint); margin-top: 4px; }
 .today-summary-progress { flex-shrink: 0; width: 220px; }
 .today-summary-progress .bar-track { height: 8px; }
 .today-summary-progress .bar-num { margin-top: 6px; text-align: right; font-size: 11px; }
+
+.today-summary-stats { display: flex; gap: 28px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); flex-wrap: wrap; }
+.today-stat { display: flex; align-items: baseline; gap: 7px; }
+.today-stat-n { font-family: var(--font-heading); font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.today-stat-l { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+.today-stat-done .today-stat-n { color: #2F5D34; }
+.today-stat-progress .today-stat-n { color: var(--red-dark); }
 
 .today-group { margin-bottom: 20px; }
 .today-group-name {
@@ -572,8 +579,9 @@ a.today-group-name:hover { color: var(--red); }
   .today-row { flex-wrap: wrap; }
   .today-row-timer { text-align: left; margin-left: 42px; }
   .today-row-actions { margin-left: 42px; }
-  .today-summary { flex-direction: column; align-items: flex-start; }
+  .today-summary-top { flex-direction: column; align-items: flex-start; }
   .today-summary-progress { width: 100%; }
+  .today-summary-stats { gap: 20px; }
 }
 
 /* ===== Clients toolbar + Import modal ===== */
