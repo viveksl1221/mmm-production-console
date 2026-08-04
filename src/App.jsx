@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { LoginScreen } from './components/AuthGate.jsx';
 import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
+import CommentsPage from './components/CommentsPage.jsx';
 import OverviewTab from './components/OverviewTab.jsx';
 import PageHeader from './components/PageHeader.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="weekly" element={<WeeklyTab />} />
         <Route path="clients" element={<ClientsTab />} />
         <Route path="clients/:clientSlug" element={<ClientPage />} />
+        <Route path="comments" element={<CommentsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

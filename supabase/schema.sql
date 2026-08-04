@@ -71,10 +71,21 @@ create table if not exists daily_progress (
   primary key (client, num, work_date)
 );
 
+-- Open comment board — external faculty/reviewers leave feedback here.
+-- No client/post scoping; just a flat, newest-first feed.
+create table if not exists comments (
+  id uuid primary key default gen_random_uuid(),
+  author_name text not null,
+  message text not null,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
 alter table posts enable row level security;
 alter table daily_progress enable row level security;
+alter table comments enable row level security;
 
 -- Anyone with the anon key can read everything. (Rename policies aren't
 -- required when you tighten this — see the header note — just swap the
@@ -152,8 +163,26 @@ create policy "can update daily_progress"
   using (true)
   with check (true);
 
+create policy "can read comments"
+  on comments for select
+  to public
+  using (true);
+
+create policy "can post comments"
+  on comments for insert
+  to public
+  with check (true);
+
+-- Anyone can remove a comment (no per-author restriction yet, matching the
+-- rest of the app's open-editing model — see header note).
+create policy "can delete comments"
+  on comments for delete
+  to public
+  using (true);
+
 -- Enable realtime so teammates see each other's changes live.
 alter publication supabase_realtime add table post_status;
 alter publication supabase_realtime add table blog_counts;
 alter publication supabase_realtime add table posts;
 alter publication supabase_realtime add table daily_progress;
+alter publication supabase_realtime add table comments;

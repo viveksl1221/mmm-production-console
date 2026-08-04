@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/weekly', label: 'Weekly Plan' },
   { to: '/clients', label: 'Clients' },
+  { to: '/comments', label: 'Comments' },
 ];
 
 export default function Sidebar({ shipped, target, showSignOut, onSignOut }) {
