@@ -60,7 +60,7 @@ export function LoginScreen() {
         <div style={{ fontSize: 11, color: '#8A8A8A', marginBottom: 22 }}>Production Console · sign in to continue</div>
 
         {sent ? (
-          <div style={{ fontSize: 13, color: '#3F7A47' }}>
+          <div style={{ fontSize: 13, color: '#171717' }}>
             Check <b>{email}</b> for a sign-in link.
           </div>
         ) : (

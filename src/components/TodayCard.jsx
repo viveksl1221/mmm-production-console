@@ -4,6 +4,52 @@ import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { BATCH_TASK } from '../lib/constants.js';
 import { getTodayInfo, todaysCounts } from '../lib/derived.js';
 
+// Ring showing today's done/in-progress/pending split, colors matched to
+// the numeric stats below it (black/red-dark/neutral) so the two read as
+// one picture rather than two competing charts.
+function TodayDonut({ done, inProgress, pending, total }) {
+  const size = 92;
+  const stroke = 13;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.round((done / total) * 100);
+
+  const segments = [
+    { count: done, color: '#171717' },
+    { count: inProgress, color: '#C93636' },
+    { count: pending, color: '#E7E7E7' },
+  ].filter((s) => s.count > 0);
+
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="today-donut">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0EEEA" strokeWidth={stroke} />
+      {segments.map((seg, i) => {
+        const len = (seg.count / total) * c;
+        const el = (
+          <circle
+            key={i}
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={stroke}
+            strokeDasharray={`${len} ${c - len}`}
+            strokeDashoffset={-offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        );
+        offset += len;
+        return el;
+      })}
+      <text x="50%" y="50%" textAnchor="middle" dy="0.32em" className="today-donut-pct">
+        {pct}%
+      </text>
+    </svg>
+  );
+}
+
 export default function TodayCard({ itemsByClient, userId }) {
   const navigate = useNavigate();
   const { weekday, weekNum, isoDate } = getTodayInfo();
@@ -30,14 +76,22 @@ export default function TodayCard({ itemsByClient, userId }) {
 
   const task = BATCH_TASK[weekday];
   const counts = !loading ? todaysCounts(itemsByClient, weekNum, weekday, progressByKey) : null;
+  const hasCounts = counts && counts.total > 0;
 
   return (
     <div className="today-card today-card-clickable" onClick={() => navigate('/today')}>
-      <div className="today-eyebrow">{WEEK_RANGES[weekNum].label} · Today's batch</div>
-      <div className="today-title">{task.name}</div>
-      <div className="today-detail">{task.detail}</div>
+      <div className="today-card-top">
+        <div className="today-card-intro">
+          <div className="today-eyebrow">{WEEK_RANGES[weekNum].label} · Today's batch</div>
+          <div className="today-title">{task.name}</div>
+          <div className="today-detail">{task.detail}</div>
+        </div>
+        {hasCounts && (
+          <TodayDonut done={counts.done} inProgress={counts.inProgress} pending={counts.pending} total={counts.total} />
+        )}
+      </div>
 
-      {counts && counts.total > 0 && (
+      {hasCounts && (
         <div className="today-card-stats">
           <div className="today-stat today-stat-done">
             <span className="today-stat-n mono">{counts.done}</span>

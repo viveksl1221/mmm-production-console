@@ -14,12 +14,16 @@ export const BATCH_TASK = {
 
 export const STATUSES = ['Planned', 'Drafted', 'Sent to Client', 'Scheduled', 'Published'];
 
+// Bg/fg/border ramp within the red/black/white palette only — no other
+// hues. Progress reads as weight, not color: lightest gray (Planned) to
+// solid black fill (Published), with red reserved for the one state that
+// means "waiting on someone outside the studio."
 export const STATUS_COLOR = {
-  Planned: { bg: '#F5F5F5', fg: '#5A5A5A', bd: '#E7E7E7' },
-  Drafted: { bg: '#EAF3EB', fg: '#3F7A47', bd: '#CBE0CC' },
+  Planned: { bg: '#F5F5F5', fg: '#8A8A8A', bd: '#E7E7E7' },
+  Drafted: { bg: '#F0F0F0', fg: '#4A4A4A', bd: '#D8D8D8' },
   'Sent to Client': { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
-  Scheduled: { bg: '#F0F0F0', fg: '#333333', bd: '#D8D8D8' },
-  Published: { bg: '#E5F0E6', fg: '#2F5D34', bd: '#B9D8BC' },
+  Scheduled: { bg: '#EDEDED', fg: '#171717', bd: '#D0D0D0' },
+  Published: { bg: '#171717', fg: '#FFFFFF', bd: '#171717' },
 };
 
 export function nextStatus(current) {
@@ -40,5 +44,5 @@ export const DAILY_STATUS_LABEL = {
 export const DAILY_STATUS_COLOR = {
   not_started: { bg: '#F5F5F5', fg: '#5A5A5A', bd: '#E7E7E7' },
   in_progress: { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
-  completed: { bg: '#E5F0E6', fg: '#2F5D34', bd: '#B9D8BC' },
+  completed: { bg: '#171717', fg: '#FFFFFF', bd: '#171717' },
 };
