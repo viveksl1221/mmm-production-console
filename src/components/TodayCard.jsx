@@ -4,10 +4,10 @@ import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { BATCH_TASK } from '../lib/constants.js';
 import { getTodayInfo, todaysCounts } from '../lib/derived.js';
 
-// Ring showing today's done/in-progress/pending split, colors matched to
-// the numeric stats below it (black/red-dark/neutral) so the two read as
-// one picture rather than two competing charts.
-function TodayDonut({ done, inProgress, pending, total }) {
+// Ring showing today's done vs. remaining split — strictly two-tone
+// (black = done, red = still to do) rather than a third neutral shade,
+// so the chart itself stays on the red/black palette.
+function TodayDonut({ done, remaining, total }) {
   const size = 92;
   const stroke = 13;
   const r = (size - stroke) / 2;
@@ -16,14 +16,13 @@ function TodayDonut({ done, inProgress, pending, total }) {
 
   const segments = [
     { count: done, color: '#171717' },
-    { count: inProgress, color: '#C93636' },
-    { count: pending, color: '#E7E7E7' },
+    { count: remaining, color: '#FF4A4A' },
   ].filter((s) => s.count > 0);
 
   let offset = 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="today-donut">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0EEEA" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E7E7E7" strokeWidth={stroke} />
       {segments.map((seg, i) => {
         const len = (seg.count / total) * c;
         const el = (
@@ -87,7 +86,7 @@ export default function TodayCard({ itemsByClient, userId }) {
           <div className="today-detail">{task.detail}</div>
         </div>
         {hasCounts && (
-          <TodayDonut done={counts.done} inProgress={counts.inProgress} pending={counts.pending} total={counts.total} />
+          <TodayDonut done={counts.done} remaining={counts.inProgress + counts.pending} total={counts.total} />
         )}
       </div>
 
