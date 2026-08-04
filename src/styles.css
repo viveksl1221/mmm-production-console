@@ -105,6 +105,7 @@
 .page-subtitle { font-size: 12.5px; color: var(--ink-faint); margin-top: 5px; }
 .client-header-brand { display: flex; align-items: center; gap: 14px; }
 .client-header-logo { width: 64px; height: 64px; border-radius: 14px; object-fit: contain; padding: 6px; border: 1px solid var(--rule); flex-shrink: 0; background: #fff; }
+.main-body { flex: 1; display: flex; min-height: 0; }
 .main-scroll {
   flex: 1;
   overflow-y: auto;
@@ -113,6 +114,29 @@
 }
 .main-scroll::-webkit-scrollbar { width: 9px; }
 .main-scroll::-webkit-scrollbar-thumb { background: #D8D5CF; border-radius: 5px; }
+
+/* ===== Feedback rail (docked to the right, wide screens only) ===== */
+.feedback-rail {
+  display: none;
+  width: 260px; flex-shrink: 0;
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px;
+  overflow-y: auto;
+}
+@media (min-width: 1500px) {
+  .feedback-rail { display: block; }
+}
+.feedback-rail-title { font-family: var(--font-heading); font-size: 14px; font-weight: 600; }
+.feedback-rail-sub { font-size: 11px; color: var(--ink-faint); margin-top: 3px; line-height: 1.4; }
+.feedback-rail-form { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.feedback-rail-name { border: 1px solid var(--rule); background: #fff; padding: 8px 9px; font-size: 12px; }
+.feedback-rail-message { min-height: 70px; font-size: 12px; padding: 8px 9px; }
+.feedback-rail-submit { align-self: flex-end; font-size: 12px; padding: 7px 14px; }
+.feedback-rail-link {
+  display: block; margin-top: 14px; font-size: 11.5px; font-weight: 600; color: var(--ink-faint);
+  text-decoration: none; transition: color .15s ease;
+}
+.feedback-rail-link:hover { color: var(--red); }
 .loading-state { color: var(--ink-faint); font-size: 13px; }
 
 /* ===== Overview: stat row ===== */

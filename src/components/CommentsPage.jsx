@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { useComments } from '../hooks/useComments.js';
-
-const NAME_STORAGE_KEY = 'mmm-comment-author';
+import { getSavedCommentName, saveCommentName } from '../lib/commentPrefs.js';
 
 function fmtWhen(iso) {
   const d = new Date(iso);
@@ -13,7 +12,7 @@ function fmtWhen(iso) {
 export default function CommentsPage() {
   const { userId } = useOutletContext();
   const { comments, loading, addComment, removeComment } = useComments(userId);
-  const [name, setName] = useState(() => localStorage.getItem(NAME_STORAGE_KEY) || '');
+  const [name, setName] = useState(getSavedCommentName);
   const [message, setMessage] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +23,7 @@ export default function CommentsPage() {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
-    localStorage.setItem(NAME_STORAGE_KEY, name.trim());
+    saveCommentName(name.trim());
     await addComment(name.trim(), message.trim());
     setMessage('');
     setSubmitting(false);
