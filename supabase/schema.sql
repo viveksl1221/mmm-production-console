@@ -81,11 +81,28 @@ create table if not exists comments (
   created_at timestamptz not null default now()
 );
 
+-- Ad-hoc tasks that aren't tied to the content calendar at all (e.g. "call
+-- the printer", "review brand guideline doc") — not scoped to a work_date
+-- like daily_progress, since these persist until done rather than resetting
+-- daily. created_at/completed_at let the app tally them per campaign month.
+create table if not exists extra_tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  status text not null default 'not_started',
+  started_at timestamptz,
+  elapsed_seconds integer not null default 0,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  completed_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
 alter table posts enable row level security;
 alter table daily_progress enable row level security;
 alter table comments enable row level security;
+alter table extra_tasks enable row level security;
 
 -- Anyone with the anon key can read everything. (Rename policies aren't
 -- required when you tighten this — see the header note — just swap the
@@ -180,9 +197,33 @@ create policy "can delete comments"
   to public
   using (true);
 
+create policy "can read extra_tasks"
+  on extra_tasks for select
+  to public
+  using (true);
+
+create policy "can insert extra_tasks"
+  on extra_tasks for insert
+  to public
+  with check (true);
+
+create policy "can update extra_tasks"
+  on extra_tasks for update
+  to public
+  using (true)
+  with check (true);
+
+-- Unlike daily_progress, these are user-created one-offs — worth letting
+-- people delete outright rather than only reset.
+create policy "can delete extra_tasks"
+  on extra_tasks for delete
+  to public
+  using (true);
+
 -- Enable realtime so teammates see each other's changes live.
 alter publication supabase_realtime add table post_status;
 alter publication supabase_realtime add table blog_counts;
 alter publication supabase_realtime add table posts;
 alter publication supabase_realtime add table daily_progress;
 alter publication supabase_realtime add table comments;
+alter publication supabase_realtime add table extra_tasks;

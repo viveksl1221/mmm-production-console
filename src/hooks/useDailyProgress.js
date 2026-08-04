@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 
-function keyOf(client, num) {
-  return `${client}::${num}`;
+function keyOf(workDate, client, num) {
+  return `${workDate}::${client}::${num}`;
 }
 
 function rowToEntry(row) {
@@ -13,13 +13,14 @@ function rowToEntry(row) {
   };
 }
 
-// Loads/saves today's checklist progress from Supabase's `daily_progress`
-// table, scoped to a single work_date so each day starts fresh. Each entry
-// also carries a per-item timer: elapsedSeconds is the banked total, and
-// startedAt (epoch ms, local clock) is set only while the timer is running —
-// UI reads it back with local-timezone formatting, so "started at" always
-// matches the studio's wall clock rather than server/UTC time.
-export function useDailyProgress(workDate, userId) {
+// Loads/saves checklist progress from Supabase's `daily_progress` table for
+// a date range [startDate, endDate] (inclusive), keyed by
+// "workDate::client::num" so the same item can be tracked independently on
+// different days (e.g. Tuesday's Carousel work vs. a Friday review pass) —
+// this is what lets Today's Batch show unfinished earlier-in-the-week items
+// as "carried over" without losing track of which day they were originally
+// due. Pass the same date for both bounds to fetch a single day.
+export function useDailyProgress(startDate, endDate, userId) {
   const [progressByKey, setProgressByKey] = useState({});
   const [loading, setLoading] = useState(true);
   // Event handlers below run outside render, so they read the latest state
@@ -36,12 +37,13 @@ export function useDailyProgress(workDate, userId) {
       try {
         const { data } = await supabase
           .from('daily_progress')
-          .select('client, num, status, started_at, elapsed_seconds')
-          .eq('work_date', workDate);
+          .select('client, num, work_date, status, started_at, elapsed_seconds')
+          .gte('work_date', startDate)
+          .lte('work_date', endDate);
         if (cancelled) return;
         const next = {};
         (data || []).forEach((row) => {
-          next[keyOf(row.client, row.num)] = rowToEntry(row);
+          next[keyOf(row.work_date, row.client, row.num)] = rowToEntry(row);
         });
         setProgressByKey(next);
       } catch (err) {
@@ -53,26 +55,24 @@ export function useDailyProgress(workDate, userId) {
 
     load();
 
+    // postgres_changes filters only support simple equality, not a range,
+    // so this subscribes unfiltered and drops anything outside the window.
     const channel = supabase
-      .channel(`daily-progress-${workDate}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'daily_progress', filter: `work_date=eq.${workDate}` },
-        (payload) => {
-          const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
-          if (!row) return;
-          setProgressByKey((prev) => ({ ...prev, [keyOf(row.client, row.num)]: rowToEntry(row) }));
-        }
-      )
+      .channel(`daily-progress-${startDate}-${endDate}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_progress' }, (payload) => {
+        const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
+        if (!row || row.work_date < startDate || row.work_date > endDate) return;
+        setProgressByKey((prev) => ({ ...prev, [keyOf(row.work_date, row.client, row.num)]: rowToEntry(row) }));
+      })
       .subscribe();
 
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [workDate]);
+  }, [startDate, endDate]);
 
-  async function persist(client, num, entry) {
+  async function persist(client, num, workDate, entry) {
     await supabase.from('daily_progress').upsert({
       client,
       num,
@@ -85,36 +85,36 @@ export function useDailyProgress(workDate, userId) {
     });
   }
 
-  function apply(client, num, entry) {
-    setProgressByKey((prev) => ({ ...prev, [keyOf(client, num)]: entry }));
-    persist(client, num, entry);
+  function apply(client, num, workDate, entry) {
+    setProgressByKey((prev) => ({ ...prev, [keyOf(workDate, client, num)]: entry }));
+    persist(client, num, workDate, entry);
   }
 
   // Turns the timer on. If the item already has banked time (e.g. resuming
   // after a pause), that time is kept and the clock keeps counting up from it.
-  function startTimer(client, num) {
-    const cur = ref.current[keyOf(client, num)];
-    apply(client, num, { status: 'in_progress', elapsedSeconds: cur?.elapsedSeconds || 0, startedAt: Date.now() });
+  function startTimer(client, num, workDate) {
+    const cur = ref.current[keyOf(workDate, client, num)];
+    apply(client, num, workDate, { status: 'in_progress', elapsedSeconds: cur?.elapsedSeconds || 0, startedAt: Date.now() });
   }
 
   // Freezes the running timer, banking the elapsed run into elapsedSeconds.
-  function pauseTimer(client, num) {
-    const cur = ref.current[keyOf(client, num)];
+  function pauseTimer(client, num, workDate) {
+    const cur = ref.current[keyOf(workDate, client, num)];
     if (!cur || !cur.startedAt) return;
     const banked = (cur.elapsedSeconds || 0) + Math.floor((Date.now() - cur.startedAt) / 1000);
-    apply(client, num, { status: 'in_progress', elapsedSeconds: banked, startedAt: null });
+    apply(client, num, workDate, { status: 'in_progress', elapsedSeconds: banked, startedAt: null });
   }
 
   // Marks the item done and stops the timer, banking any time still running.
-  function completeItem(client, num) {
-    const cur = ref.current[keyOf(client, num)];
+  function completeItem(client, num, workDate) {
+    const cur = ref.current[keyOf(workDate, client, num)];
     const extra = cur?.startedAt ? Math.floor((Date.now() - cur.startedAt) / 1000) : 0;
-    apply(client, num, { status: 'completed', elapsedSeconds: (cur?.elapsedSeconds || 0) + extra, startedAt: null });
+    apply(client, num, workDate, { status: 'completed', elapsedSeconds: (cur?.elapsedSeconds || 0) + extra, startedAt: null });
   }
 
   // Reopens a completed item, or clears a not-started-yet timer, to a clean slate.
-  function resetItem(client, num) {
-    apply(client, num, { status: 'not_started', elapsedSeconds: 0, startedAt: null });
+  function resetItem(client, num, workDate) {
+    apply(client, num, workDate, { status: 'not_started', elapsedSeconds: 0, startedAt: null });
   }
 
   return { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem };

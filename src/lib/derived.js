@@ -240,15 +240,17 @@ export function blogProgressKey(client) {
 
 // Done/in-progress/pending/total counts for today's checklist, shared by
 // the full /today page and the compact Overview card so both read the same
-// numbers off the same daily_progress state.
-export function todaysCounts(itemsByClient, weekNum, weekday, progressByKey) {
+// numbers off the same daily_progress state. progressByKey is keyed
+// "workDate::client::num" (see useDailyProgress), so isoDate is required to
+// look today's rows up correctly.
+export function todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey) {
   const isBlogDay = weekday === 4;
   const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, weekday);
   const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
 
   const statuses = [
-    ...postRows.map((r) => progressByKey[`${r.client}::${r.item.num}`]?.status || 'not_started'),
-    ...blogRows.map((r) => progressByKey[`${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
+    ...postRows.map((r) => progressByKey[`${isoDate}::${r.client}::${r.item.num}`]?.status || 'not_started'),
+    ...blogRows.map((r) => progressByKey[`${isoDate}::${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
   ];
   return {
     total: statuses.length,
@@ -256,4 +258,91 @@ export function todaysCounts(itemsByClient, weekNum, weekday, progressByKey) {
     inProgress: statuses.filter((s) => s === 'in_progress').length,
     pending: statuses.filter((s) => s === 'not_started').length,
   };
+}
+
+function toIso(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+// The day-of-month each week bucket (see getTodayInfo) starts on — matches
+// WEEK_RANGES' start labels (Aug 1/10/17/24).
+const WEEK_START_DAY = { 1: 1, 2: 10, 3: 17, 4: 24 };
+
+// Real calendar ISO date for a given (weekNum, weekday) pair, e.g. "which
+// date is Wednesday of Week 2" — lets the calendar strip work ahead of or
+// review behind the real today, independent of what day it actually is.
+export function isoDateForWeekday(weekNum, weekday) {
+  const startDate = new Date(CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX, WEEK_START_DAY[weekNum]);
+  const startDow = startDate.getDay(); // 0=Sun..6=Sat
+  const daysUntilMonday = (8 - startDow) % 7;
+  const monday = new Date(startDate);
+  monday.setDate(startDate.getDate() + daysUntilMonday);
+  monday.setDate(monday.getDate() + (weekday - 1));
+  return toIso(monday);
+}
+
+// [start, end] ISO bounds of the whole campaign month — used to fetch a
+// month's worth of daily_progress in one query so any day can be browsed
+// and acted on ahead of time, not just the current week.
+export function campaignMonthBounds() {
+  const start = new Date(CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX, 1);
+  const end = new Date(CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX + 1, 0);
+  return { start: toIso(start), end: toIso(end) };
+}
+
+// {weekday, isoDate} for each weekday from Monday of this week through (but
+// not including) today — the days carriedOverRows checks for unfinished work.
+function weekdaysBeforeToday(isoDate, weekday) {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const today = new Date(y, m - 1, d);
+  const out = [];
+  for (let wd = 1; wd < weekday; wd++) {
+    const past = new Date(today);
+    past.setDate(today.getDate() - (weekday - wd));
+    out.push({ weekday: wd, isoDate: `${past.getFullYear()}-${String(past.getMonth() + 1).padStart(2, '0')}-${String(past.getDate()).padStart(2, '0')}` });
+  }
+  return out;
+}
+
+// Items scheduled on an earlier day this week whose progress on THAT
+// specific day never reached completed — the safety net for "I didn't
+// finish Tuesday's Carousel batch." Only Tuesday/Wednesday/Thursday count
+// as a real "due day" per format — Monday is a copy pass and Friday a
+// review pass over the *whole* week's items regardless of format, so
+// treating either as a per-item deadline would flag e.g. a Reel as overdue
+// on Tuesday when its actual production day (Wednesday) hasn't happened
+// yet. Dedupes against whatever's already in today's own list so nothing
+// doubles up on Friday, which naturally re-sweeps everything anyway.
+export function carriedOverRows(itemsByClient, weekNum, weekday, isoDate, progressByKey) {
+  if (!weekNum || weekday === 0 || weekday === 6) return [];
+
+  const todayKeys = new Set();
+  const isBlogDayToday = weekday === 4;
+  (isBlogDayToday ? [] : todaysItems(itemsByClient, weekNum, weekday)).forEach((r) => todayKeys.add(`${r.client}::${r.item.num}`));
+  (isBlogDayToday ? todaysBlogTasks(weekNum) : []).forEach((r) => todayKeys.add(`${blogProgressKey(r.client)}::0`));
+
+  const rows = [];
+  weekdaysBeforeToday(isoDate, weekday).forEach(({ weekday: wd, isoDate: dueDate }) => {
+    if (wd === 1) return; // Monday's copy pass isn't a per-format production deadline
+    const isBlogDay = wd === 4;
+    const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, wd);
+    const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
+
+    postRows.forEach((r) => {
+      const itemKey = `${r.client}::${r.item.num}`;
+      if (todayKeys.has(itemKey)) return;
+      const status = progressByKey[`${dueDate}::${itemKey}`]?.status || 'not_started';
+      if (status === 'completed') return;
+      rows.push({ client: r.client, item: r.item, timeMin: r.timeMin, dueWeekday: wd, dueDate });
+    });
+
+    blogRows.forEach((r) => {
+      const itemKey = `${blogProgressKey(r.client)}::0`;
+      if (todayKeys.has(itemKey)) return;
+      const status = progressByKey[`${dueDate}::${itemKey}`]?.status || 'not_started';
+      if (status === 'completed') return;
+      rows.push({ client: r.client, count: r.count, timeMin: r.timeMin, isBlog: true, dueWeekday: wd, dueDate });
+    });
+  });
+  return rows;
 }

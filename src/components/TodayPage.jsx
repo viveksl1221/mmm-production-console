@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { WEEK_RANGES } from '../data/campaign.js';
+import { CAMPAIGN_MONTH_INDEX, CAMPAIGN_YEAR, WEEK_RANGES } from '../data/campaign.js';
 import { useDailyProgress } from '../hooks/useDailyProgress.js';
+import { useExtraTasks } from '../hooks/useExtraTasks.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { BATCH_TASK, DAILY_STATUS_COLOR, DAILY_STATUS_LABEL } from '../lib/constants.js';
 import {
-  blogProgressKey, fmtClock, fmtHours, getTodayInfo, postKey, slug, todaysBlogTasks, todaysCounts, todaysItems,
+  blogProgressKey, campaignMonthBounds, carriedOverRows, fmtClock, fmtHours, getTodayInfo, isoDateForWeekday,
+  postKey, slug, todaysBlogTasks, todaysCounts, todaysItems,
 } from '../lib/derived.js';
 import PostDetailModal from './PostDetailModal.jsx';
+
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function liveElapsedSeconds(entry) {
   if (!entry) return 0;
@@ -15,20 +19,34 @@ function liveElapsedSeconds(entry) {
   return entry.elapsedSeconds;
 }
 
-function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart, onPause, onComplete, onReset, onOpenDetail }) {
+function inCampaignMonth(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return d.getFullYear() === CAMPAIGN_YEAR && d.getMonth() === CAMPAIGN_MONTH_INDEX;
+}
+
+function fmtShortDate(iso) {
+  const [, m, d] = iso.split('-').map(Number);
+  return new Date(2000, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function ChecklistRow({ client, title, subtitle, format, timeMin, dueTag, entry, onStart, onPause, onComplete, onReset, onOpenDetail, onRemove }) {
   const status = entry?.status || 'not_started';
   const running = status === 'in_progress' && !!entry?.startedAt;
   const elapsed = liveElapsedSeconds(entry);
-  const budgetSec = timeMin * 60;
-  const overBudget = elapsed > budgetSec && status !== 'completed';
+  const hasBudget = timeMin > 0;
+  const overBudget = hasBudget && elapsed > timeMin * 60 && status !== 'completed';
   const col = DAILY_STATUS_COLOR[status];
   const startedClock = running && entry?.startedAt ? new Date(entry.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
 
   return (
     <div className="today-row">
-      {CLIENT_LOGOS[client] && <img className="today-row-logo" src={CLIENT_LOGOS[client]} alt="" />}
+      {client && CLIENT_LOGOS[client] && <img className="today-row-logo" src={CLIENT_LOGOS[client]} alt="" />}
       <div className={`today-row-body${onOpenDetail ? ' today-row-body-clickable' : ''}`} onClick={onOpenDetail}>
-        <div className="today-row-topic">{title}</div>
+        <div className="today-row-topic">
+          {dueTag && <span className="due-tag">Due {dueTag}</span>}
+          {title}
+        </div>
         {subtitle && <div className="today-row-hook">{subtitle}</div>}
       </div>
       {format && <span className="format-pill">{format}</span>}
@@ -37,9 +55,12 @@ function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart
         <div className={`today-row-clock mono${overBudget ? ' over-budget' : ''}`}>
           {status === 'not_started' ? '—' : fmtClock(elapsed)}
         </div>
-        <div className="today-row-budget mono">
-          of ~{fmtHours(timeMin)} budget{startedClock ? ` · started ${startedClock}` : ''}
-        </div>
+        {(hasBudget || startedClock) && (
+          <div className="today-row-budget mono">
+            {hasBudget ? `of ~${fmtHours(timeMin)} budget` : ''}
+            {startedClock ? `${hasBudget ? ' · ' : ''}started ${startedClock}` : ''}
+          </div>
+        )}
       </div>
 
       <div className="today-row-actions">
@@ -65,6 +86,7 @@ function ChecklistRow({ client, title, subtitle, format, timeMin, entry, onStart
             <button className="timer-btn timer-btn-reset" onClick={onReset}>Reopen</button>
           </>
         )}
+        {onRemove && <button className="row-remove" title="Delete task" onClick={onRemove}>×</button>}
       </div>
     </div>
   );
@@ -83,11 +105,63 @@ function ClientGroup({ client, linkTo, children }) {
   );
 }
 
+// Week + day navigator — lets you browse and act on any day in the
+// campaign month, not just today. Each day tab shows its own task type and
+// done/total so you can see at a glance what's still open days out.
+function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, itemsByClient, progressByKey }) {
+  return (
+    <div className="cal-strip">
+      <div className="cal-week-tabs">
+        {[1, 2, 3, 4].map((w) => (
+          <button
+            key={w}
+            className={`cal-week-tab${selWeek === w ? ' active' : ''}${today.weekNum === w ? ' is-current' : ''}`}
+            onClick={() => onSelectWeek(w)}
+          >
+            {WEEK_RANGES[w].label}
+          </button>
+        ))}
+      </div>
+      <div className="cal-day-tabs">
+        {[1, 2, 3, 4, 5].map((wd) => {
+          const iso = isoDateForWeekday(selWeek, wd);
+          const counts = todaysCounts(itemsByClient, selWeek, wd, iso, progressByKey);
+          const isToday = today.isoDate === iso;
+          return (
+            <button
+              key={wd}
+              className={`cal-day-tab${selDay === wd ? ' active' : ''}${isToday ? ' is-today' : ''}`}
+              onClick={() => onSelectDay(wd)}
+            >
+              <div className="cal-day-name">{WEEKDAY_SHORT[wd]}{isToday && <span className="cal-today-dot" />}</div>
+              <div className="cal-day-date mono">{fmtShortDate(iso)}</div>
+              <div className="cal-day-task">{BATCH_TASK[wd].name}</div>
+              {counts.total > 0 && (
+                <div className={`cal-day-progress mono${counts.done === counts.total ? ' complete' : ''}`}>
+                  {counts.done}/{counts.total}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function TodayPage() {
   const { userId, content, posts } = useOutletContext();
-  const { weekday, weekNum, isoDate } = getTodayInfo();
-  const { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem } = useDailyProgress(isoDate, userId);
+  const today = getTodayInfo();
+  const [selWeek, setSelWeek] = useState(today.weekNum || 1);
+  const [selDay, setSelDay] = useState(today.weekday >= 1 && today.weekday <= 5 ? today.weekday : 1);
+  const selIsoDate = isoDateForWeekday(selWeek, selDay);
+  const isViewingToday = today.isoDate === selIsoDate;
+
+  const { start: monthStart, end: monthEnd } = campaignMonthBounds();
+  const { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem } = useDailyProgress(monthStart, monthEnd, userId);
+  const extra = useExtraTasks(userId);
   const [detailFor, setDetailFor] = useState(null);
+  const [extraTitle, setExtraTitle] = useState('');
 
   // Forces a re-render every second so running timers visibly tick — only
   // costs anything while this page is mounted and someone has a clock going.
@@ -97,120 +171,241 @@ export default function TodayPage() {
     return () => clearInterval(id);
   }, []);
 
-  if (!weekNum) {
-    return <div className="empty-state">This console tracks August 2026 — nothing scheduled outside that window.</div>;
-  }
-  if (weekday === 0 || weekday === 6) {
-    return (
-      <div className="empty-state">
-        No batch task today — it's the weekend. Next up: Monday — hooks &amp; captions for {WEEK_RANGES[weekNum].label}.
-      </div>
+  let calendarBody;
+  if (loading) {
+    calendarBody = <div className="loading-state">Loading…</div>;
+  } else {
+    const task = BATCH_TASK[selDay];
+    const isBlogDay = selDay === 4;
+    const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, selWeek, selDay);
+    const blogRows = isBlogDay ? todaysBlogTasks(selWeek) : [];
+    const carried = isViewingToday && today.weekNum
+      ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey)
+      : [];
+    const carriedPosts = carried.filter((r) => !r.isBlog);
+    const carriedBlogs = carried.filter((r) => r.isBlog);
+
+    const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
+      todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey);
+    const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
+    const loggedSeconds =
+      postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${r.client}::${r.item.num}`]), 0) +
+      blogRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${blogProgressKey(r.client)}::0`]), 0);
+    const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    const grouped = {};
+    postRows.forEach((r) => (grouped[r.client] ||= []).push(r));
+    const carriedGrouped = {};
+    carriedPosts.forEach((r) => (carriedGrouped[r.client] ||= []).push(r));
+
+    calendarBody = (
+      <>
+        <div className="today-summary">
+          <div className="today-summary-top">
+            <div className="today-summary-task">
+              <div className="today-summary-name">
+                {task.name}
+                <span className="today-summary-date mono">{fmtShortDate(selIsoDate)}{isViewingToday ? ' · Today' : ''}</span>
+              </div>
+              <div className="today-summary-detail">{task.detail}</div>
+            </div>
+            <div className="today-summary-progress">
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+              <div className="bar-num mono">
+                logged {fmtHours(Math.round(loggedSeconds / 60))} of ~{fmtHours(totalMinutes)} budget
+              </div>
+            </div>
+          </div>
+          {totalCount > 0 && (
+            <div className="today-summary-stats">
+              <div className="today-stat today-stat-done">
+                <span className="today-stat-n mono">{completedCount}</span>
+                <span className="today-stat-l">Done</span>
+              </div>
+              <div className="today-stat today-stat-progress">
+                <span className="today-stat-n mono">{inProgressCount}</span>
+                <span className="today-stat-l">In Progress</span>
+              </div>
+              <div className="today-stat today-stat-pending">
+                <span className="today-stat-n mono">{pendingCount}</span>
+                <span className="today-stat-l">Pending</span>
+              </div>
+              <div className="today-stat today-stat-total">
+                <span className="today-stat-n mono">{totalCount}</span>
+                <span className="today-stat-l">Total</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {carried.length > 0 && (
+          <div className="today-carried-section">
+            <div className="section-label today-carried-label">
+              Carried Over <span className="today-carried-count mono">{carried.length}</span>
+            </div>
+            {Object.entries(carriedGrouped).map(([client, rows]) => (
+              <ClientGroup client={client} linkTo={`/clients/${slug(client)}`} key={`carried-${client}`}>
+                {rows.map(({ item, timeMin, dueWeekday, dueDate }) => {
+                  const key = `${dueDate}::${client}::${item.num}`;
+                  return (
+                    <ChecklistRow
+                      key={key}
+                      client={client}
+                      title={item.topic || '(untitled)'}
+                      subtitle={item.hook}
+                      format={item.format}
+                      timeMin={timeMin}
+                      dueTag={WEEKDAY_SHORT[dueWeekday]}
+                      entry={progressByKey[key]}
+                      onStart={() => startTimer(client, item.num, dueDate)}
+                      onPause={() => pauseTimer(client, item.num, dueDate)}
+                      onComplete={() => completeItem(client, item.num, dueDate)}
+                      onReset={() => resetItem(client, item.num, dueDate)}
+                      onOpenDetail={() => setDetailFor({ client, item })}
+                    />
+                  );
+                })}
+              </ClientGroup>
+            ))}
+            {carriedBlogs.length > 0 && (
+              <ClientGroup client="Blog Creatives" key="carried-blogs">
+                {carriedBlogs.map((r) => {
+                  const bKey = blogProgressKey(r.client);
+                  const key = `${r.dueDate}::${bKey}::0`;
+                  return (
+                    <ChecklistRow
+                      key={`${r.client}-${r.dueDate}`}
+                      client={r.client}
+                      title={r.client}
+                      subtitle={`${r.count} blog creative${r.count > 1 ? 's' : ''}`}
+                      timeMin={r.timeMin}
+                      dueTag={WEEKDAY_SHORT[r.dueWeekday]}
+                      entry={progressByKey[key]}
+                      onStart={() => startTimer(bKey, 0, r.dueDate)}
+                      onPause={() => pauseTimer(bKey, 0, r.dueDate)}
+                      onComplete={() => completeItem(bKey, 0, r.dueDate)}
+                      onReset={() => resetItem(bKey, 0, r.dueDate)}
+                    />
+                  );
+                })}
+              </ClientGroup>
+            )}
+          </div>
+        )}
+
+        {totalCount === 0 && <div className="empty-state">Nothing scheduled for this day's task type.</div>}
+
+        {Object.entries(grouped).map(([client, rows]) => (
+          <ClientGroup client={client} linkTo={`/clients/${slug(client)}`} key={client}>
+            {rows.map(({ item, timeMin }) => {
+              const key = `${selIsoDate}::${client}::${item.num}`;
+              return (
+                <ChecklistRow
+                  key={key}
+                  client={client}
+                  title={item.topic || '(untitled)'}
+                  subtitle={item.hook}
+                  format={item.format}
+                  timeMin={timeMin}
+                  entry={progressByKey[key]}
+                  onStart={() => startTimer(client, item.num, selIsoDate)}
+                  onPause={() => pauseTimer(client, item.num, selIsoDate)}
+                  onComplete={() => completeItem(client, item.num, selIsoDate)}
+                  onReset={() => resetItem(client, item.num, selIsoDate)}
+                  onOpenDetail={() => setDetailFor({ client, item })}
+                />
+              );
+            })}
+          </ClientGroup>
+        ))}
+
+        {blogRows.length > 0 && (
+          <ClientGroup client="Blog Creatives" key="__blogs">
+            {blogRows.map(({ client, count, timeMin }) => {
+              const bKey = blogProgressKey(client);
+              const key = `${selIsoDate}::${bKey}::0`;
+              return (
+                <ChecklistRow
+                  key={client}
+                  client={client}
+                  title={client}
+                  subtitle={`${count} blog creative${count > 1 ? 's' : ''} due this week`}
+                  timeMin={timeMin}
+                  entry={progressByKey[key]}
+                  onStart={() => startTimer(bKey, 0, selIsoDate)}
+                  onPause={() => pauseTimer(bKey, 0, selIsoDate)}
+                  onComplete={() => completeItem(bKey, 0, selIsoDate)}
+                  onReset={() => resetItem(bKey, 0, selIsoDate)}
+                />
+              );
+            })}
+          </ClientGroup>
+        )}
+      </>
     );
   }
-  if (loading) {
-    return <div className="loading-state">Loading…</div>;
+
+  const monthTasks = extra.tasks.filter((t) => inCampaignMonth(t.createdAt));
+  const monthDone = monthTasks.filter((t) => t.status === 'completed').length;
+
+  async function handleAddExtra(e) {
+    e.preventDefault();
+    const title = extraTitle.trim();
+    if (!title) return;
+    setExtraTitle('');
+    await extra.addTask(title);
   }
-
-  const task = BATCH_TASK[weekday];
-  const isBlogDay = weekday === 4;
-  const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, weekNum, weekday);
-  const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
-
-  const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
-    todaysCounts(content.itemsByClient, weekNum, weekday, progressByKey);
-  const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
-  const loggedSeconds =
-    postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${r.client}::${r.item.num}`]), 0) +
-    blogRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${blogProgressKey(r.client)}::0`]), 0);
-  const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  const grouped = {};
-  postRows.forEach((r) => (grouped[r.client] ||= []).push(r));
 
   return (
     <>
-      <div className="today-summary">
-        <div className="today-summary-top">
-          <div className="today-summary-task">
-            <div className="today-summary-name">{task.name}</div>
-            <div className="today-summary-detail">{task.detail}</div>
-          </div>
-          <div className="today-summary-progress">
-            <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-            <div className="bar-num mono">
-              logged {fmtHours(Math.round(loggedSeconds / 60))} of ~{fmtHours(totalMinutes)} budget
-            </div>
-          </div>
+      <CalendarStrip
+        selWeek={selWeek}
+        selDay={selDay}
+        onSelectWeek={setSelWeek}
+        onSelectDay={setSelDay}
+        today={today}
+        itemsByClient={content.itemsByClient}
+        progressByKey={progressByKey}
+      />
+
+      {calendarBody}
+
+      <div className="today-extra-section">
+        <div className="today-extra-head">
+          <div className="section-label today-extra-label">Additional Tasks</div>
+          <div className="today-extra-month mono">{monthDone}/{monthTasks.length} done this month</div>
         </div>
-        {totalCount > 0 && (
-          <div className="today-summary-stats">
-            <div className="today-stat today-stat-done">
-              <span className="today-stat-n mono">{completedCount}</span>
-              <span className="today-stat-l">Done</span>
-            </div>
-            <div className="today-stat today-stat-progress">
-              <span className="today-stat-n mono">{inProgressCount}</span>
-              <span className="today-stat-l">In Progress</span>
-            </div>
-            <div className="today-stat today-stat-pending">
-              <span className="today-stat-n mono">{pendingCount}</span>
-              <span className="today-stat-l">Pending</span>
-            </div>
-            <div className="today-stat today-stat-total">
-              <span className="today-stat-n mono">{totalCount}</span>
-              <span className="today-stat-l">Total</span>
-            </div>
+        <form className="today-extra-form" onSubmit={handleAddExtra}>
+          <input
+            className="edit-input today-extra-input"
+            value={extraTitle}
+            onChange={(e) => setExtraTitle(e.target.value)}
+            placeholder="Add a task that's not on the calendar…"
+            maxLength={140}
+          />
+          <button className="add-post-btn" type="submit" disabled={!extraTitle.trim()}>+ Add</button>
+        </form>
+        {extra.loading ? (
+          <div className="loading-state">Loading…</div>
+        ) : extra.tasks.length === 0 ? (
+          <div className="empty-state">Nothing extra on the list.</div>
+        ) : (
+          <div className="today-group-rows">
+            {extra.tasks.map((t) => (
+              <ChecklistRow
+                key={t.id}
+                title={t.title}
+                entry={t}
+                onStart={() => extra.startTimer(t.id)}
+                onPause={() => extra.pauseTimer(t.id)}
+                onComplete={() => extra.completeItem(t.id)}
+                onReset={() => extra.resetItem(t.id)}
+                onRemove={() => extra.removeTask(t.id)}
+              />
+            ))}
           </div>
         )}
       </div>
-
-      {totalCount === 0 && <div className="empty-state">Nothing scheduled for today's task type this week.</div>}
-
-      {Object.entries(grouped).map(([client, rows]) => (
-        <ClientGroup client={client} linkTo={`/clients/${slug(client)}`} key={client}>
-          {rows.map(({ item, timeMin }) => {
-            const key = `${client}::${item.num}`;
-            return (
-              <ChecklistRow
-                key={key}
-                client={client}
-                title={item.topic || '(untitled)'}
-                subtitle={item.hook}
-                format={item.format}
-                timeMin={timeMin}
-                entry={progressByKey[key]}
-                onStart={() => startTimer(client, item.num)}
-                onPause={() => pauseTimer(client, item.num)}
-                onComplete={() => completeItem(client, item.num)}
-                onReset={() => resetItem(client, item.num)}
-                onOpenDetail={() => setDetailFor({ client, item })}
-              />
-            );
-          })}
-        </ClientGroup>
-      ))}
-
-      {blogRows.length > 0 && (
-        <ClientGroup client="Blog Creatives" key="__blogs">
-          {blogRows.map(({ client, count, timeMin }) => {
-            const bKey = blogProgressKey(client);
-            return (
-              <ChecklistRow
-                key={client}
-                client={client}
-                title={client}
-                subtitle={`${count} blog creative${count > 1 ? 's' : ''} due this week`}
-                timeMin={timeMin}
-                entry={progressByKey[`${bKey}::0`]}
-                onStart={() => startTimer(bKey, 0)}
-                onPause={() => pauseTimer(bKey, 0)}
-                onComplete={() => completeItem(bKey, 0)}
-                onReset={() => resetItem(bKey, 0)}
-              />
-            );
-          })}
-        </ClientGroup>
-      )}
 
       {detailFor && (
         <PostDetailModal
