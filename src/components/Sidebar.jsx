@@ -4,6 +4,7 @@ import profilePic from '../assets/profile-vivek.jpg';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
+  { to: '/today', label: "Today's Batch" },
   { to: '/weekly', label: 'Weekly Plan' },
   { to: '/clients', label: 'Clients' },
   { to: '/comments', label: 'Comments' },

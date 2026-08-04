@@ -6,11 +6,11 @@ import StatGrid from './StatGrid.jsx';
 import TodayCard from './TodayCard.jsx';
 
 export default function OverviewTab() {
-  const { posts, blogs, content } = useOutletContext();
+  const { posts, blogs, content, userId } = useOutletContext();
   const weeklyData = computeWeekly(content.itemsByClient);
   return (
     <>
-      <TodayCard />
+      <TodayCard itemsByClient={content.itemsByClient} userId={userId} />
       <StatGrid posts={posts} blogs={blogs} itemsByClient={content.itemsByClient} weeklyData={weeklyData} />
       <BurnChart posts={posts} itemsByClient={content.itemsByClient} weeklyData={weeklyData} />
       <div className="section-label">Needs attention</div>

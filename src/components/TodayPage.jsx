@@ -4,14 +4,9 @@ import { WEEK_RANGES } from '../data/campaign.js';
 import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { BATCH_TASK, DAILY_STATUS_COLOR, DAILY_STATUS_LABEL } from '../lib/constants.js';
-import { fmtClock, fmtHours, getTodayInfo, slug, todaysBlogTasks, todaysItems } from '../lib/derived.js';
-
-// Blog rows have no individual post record to key off of, so they get a
-// synthetic client string ("Blog: My Health") with num=0 — keeps `num` a
-// valid integer for the DB while staying unique per real client.
-function blogProgressKey(client) {
-  return `Blog: ${client}`;
-}
+import {
+  blogProgressKey, fmtClock, fmtHours, getTodayInfo, slug, todaysBlogTasks, todaysCounts, todaysItems,
+} from '../lib/derived.js';
 
 function liveElapsedSeconds(entry) {
   if (!entry) return 0;
@@ -119,14 +114,8 @@ export default function TodayPage() {
   const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, weekNum, weekday);
   const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
 
-  const allStatuses = [
-    ...postRows.map((r) => progressByKey[`${r.client}::${r.item.num}`]?.status || 'not_started'),
-    ...blogRows.map((r) => progressByKey[`${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
-  ];
-  const totalCount = allStatuses.length;
-  const completedCount = allStatuses.filter((s) => s === 'completed').length;
-  const inProgressCount = allStatuses.filter((s) => s === 'in_progress').length;
-  const pendingCount = allStatuses.filter((s) => s === 'not_started').length;
+  const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
+    todaysCounts(content.itemsByClient, weekNum, weekday, progressByKey);
   const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
   const loggedSeconds =
     postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${r.client}::${r.item.num}`]), 0) +

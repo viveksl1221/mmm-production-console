@@ -185,6 +185,7 @@
 .today-detail { font-size: 12.5px; color: var(--ink-dim); margin-top: 5px; }
 .today-card-clickable { cursor: pointer; transition: box-shadow .15s ease, border-color .15s ease; }
 .today-card-clickable:hover { box-shadow: var(--shadow-hover); border-color: #FFB4AE; }
+.today-card-stats { display: flex; gap: 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #FFD4CE; flex-wrap: wrap; }
 .today-cta { font-size: 11.5px; font-weight: 700; color: var(--red-dark); margin-top: 10px; }
 
 /* ===== Today page (/today checklist) ===== */

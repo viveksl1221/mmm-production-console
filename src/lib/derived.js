@@ -230,3 +230,30 @@ export function todaysBlogTasks(weekNum) {
     .map(([client, count]) => ({ client, count, timeMin: count * TIME_MIN.Blog }))
     .sort((a, b) => b.count - a.count);
 }
+
+// Blog rows have no individual post record to key off of, so they get a
+// synthetic client string ("Blog: My Health") with num=0 in daily_progress —
+// keeps `num` a valid integer for the DB while staying unique per client.
+export function blogProgressKey(client) {
+  return `Blog: ${client}`;
+}
+
+// Done/in-progress/pending/total counts for today's checklist, shared by
+// the full /today page and the compact Overview card so both read the same
+// numbers off the same daily_progress state.
+export function todaysCounts(itemsByClient, weekNum, weekday, progressByKey) {
+  const isBlogDay = weekday === 4;
+  const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, weekday);
+  const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
+
+  const statuses = [
+    ...postRows.map((r) => progressByKey[`${r.client}::${r.item.num}`]?.status || 'not_started'),
+    ...blogRows.map((r) => progressByKey[`${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
+  ];
+  return {
+    total: statuses.length,
+    done: statuses.filter((s) => s === 'completed').length,
+    inProgress: statuses.filter((s) => s === 'in_progress').length,
+    pending: statuses.filter((s) => s === 'not_started').length,
+  };
+}
