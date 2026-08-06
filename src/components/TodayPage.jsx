@@ -9,9 +9,12 @@ import {
   blogProgressKey, campaignMonthBounds, carriedOverRows, fmtClock, fmtHours, getTodayInfo, isoDateForWeekday,
   postKey, slug, todaysBlogTasks, todaysCounts, todaysItems,
 } from '../lib/derived.js';
+import { buildDaySummaryText } from '../lib/summaryText.js';
 import PostDetailModal from './PostDetailModal.jsx';
+import SummaryPreviewModal from './SummaryPreviewModal.jsx';
 
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function liveElapsedSeconds(entry) {
   if (!entry) return 0;
@@ -162,6 +165,7 @@ export default function TodayPage() {
   const extra = useExtraTasks(userId);
   const [detailFor, setDetailFor] = useState(null);
   const [extraTitle, setExtraTitle] = useState('');
+  const [summaryText, setSummaryText] = useState(null);
 
   // Forces a re-render every second so running timers visibly tick — only
   // costs anything while this page is mounted and someone has a clock going.
@@ -171,6 +175,12 @@ export default function TodayPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Computed once at the top so both the checklist body and the summary
+  // preview read the same carried-over list.
+  const carried = !loading && today.weekNum
+    ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey)
+    : [];
+
   let calendarBody;
   if (loading) {
     calendarBody = <div className="loading-state">Loading…</div>;
@@ -179,11 +189,9 @@ export default function TodayPage() {
     const isBlogDay = selDay === 4;
     const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, selWeek, selDay);
     const blogRows = isBlogDay ? todaysBlogTasks(selWeek) : [];
-    const carried = isViewingToday && today.weekNum
-      ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey)
-      : [];
-    const carriedPosts = carried.filter((r) => !r.isBlog);
-    const carriedBlogs = carried.filter((r) => r.isBlog);
+    const carriedForToday = isViewingToday ? carried : [];
+    const carriedPosts = carriedForToday.filter((r) => !r.isBlog);
+    const carriedBlogs = carriedForToday.filter((r) => r.isBlog);
 
     const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
       todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey);
@@ -198,6 +206,21 @@ export default function TodayPage() {
     const carriedGrouped = {};
     carriedPosts.forEach((r) => (carriedGrouped[r.client] ||= []).push(r));
 
+    function openSummaryPreview() {
+      setSummaryText(buildDaySummaryText({
+        isoDate: selIsoDate,
+        dayLabel: `${WEEKDAY_FULL[selDay]}, ${fmtShortDate(selIsoDate)}`,
+        weekLabel: WEEK_RANGES[selWeek].label,
+        isToday: isViewingToday,
+        task,
+        postRows,
+        blogRows,
+        carried: carriedForToday,
+        extraTasks: extra.tasks,
+        progressByKey,
+      }));
+    }
+
     calendarBody = (
       <>
         <div className="today-summary">
@@ -208,6 +231,7 @@ export default function TodayPage() {
                 <span className="today-summary-date mono">{fmtShortDate(selIsoDate)}{isViewingToday ? ' · Today' : ''}</span>
               </div>
               <div className="today-summary-detail">{task.detail}</div>
+              <button className="today-summary-copy-btn" onClick={openSummaryPreview}>Copy Summary for AI →</button>
             </div>
             <div className="today-summary-progress">
               <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
@@ -238,10 +262,10 @@ export default function TodayPage() {
           )}
         </div>
 
-        {carried.length > 0 && (
+        {carriedForToday.length > 0 && (
           <div className="today-carried-section">
             <div className="section-label today-carried-label">
-              Carried Over <span className="today-carried-count mono">{carried.length}</span>
+              Carried Over <span className="today-carried-count mono">{carriedForToday.length}</span>
             </div>
             {Object.entries(carriedGrouped).map(([client, rows]) => (
               <ClientGroup client={client} linkTo={`/clients/${slug(client)}`} key={`carried-${client}`}>
@@ -414,6 +438,10 @@ export default function TodayPage() {
           status={posts[postKey(detailFor.client, detailFor.item.num)] || 'Planned'}
           onClose={() => setDetailFor(null)}
         />
+      )}
+
+      {summaryText && (
+        <SummaryPreviewModal text={summaryText} onClose={() => setSummaryText(null)} />
       )}
     </>
   );
