@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { LoginScreen } from './components/AuthGate.jsx';
+import AssistantWidget from './components/AssistantWidget.jsx';
 import ChatPage from './components/ChatPage.jsx';
 import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
@@ -20,6 +21,7 @@ function ConsoleLayout({ userId, onSignOut }) {
   const content = useClientContent(userId);
   const location = useLocation();
   const showFeedbackWidget = location.pathname !== '/comments';
+  const showAssistantWidget = location.pathname !== '/assistant';
 
   return (
     <div id="console-root">
@@ -40,6 +42,7 @@ function ConsoleLayout({ userId, onSignOut }) {
         </div>
       </main>
       {showFeedbackWidget && <FeedbackWidget userId={userId} />}
+      {showAssistantWidget && <AssistantWidget />}
     </div>
   );
 }
