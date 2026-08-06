@@ -17,6 +17,7 @@ const COPY = {
   '/weekly': { title: 'Weekly Plan', subtitle: 'Batch cadence, week by week' },
   '/clients': { title: 'Clients', subtitle: 'Every post and blog creative, by client' },
   '/comments': { title: 'Comments', subtitle: 'Feedback and notes from the team' },
+  '/assistant': { title: 'AI Assistant', subtitle: 'Ask about prioritizing, batching, or drafting hooks' },
 };
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

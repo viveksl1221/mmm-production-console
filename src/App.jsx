@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { LoginScreen } from './components/AuthGate.jsx';
+import ChatPage from './components/ChatPage.jsx';
 import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
 import CommentsPage from './components/CommentsPage.jsx';
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="clients" element={<ClientsTab />} />
         <Route path="clients/:clientSlug" element={<ClientPage />} />
         <Route path="comments" element={<CommentsPage />} />
+        <Route path="assistant" element={<ChatPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

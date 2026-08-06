@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/weekly', label: 'Weekly Plan' },
   { to: '/clients', label: 'Clients' },
   { to: '/comments', label: 'Comments' },
+  { to: '/assistant', label: 'AI Assistant' },
 ];
 
 export default function Sidebar({ shipped, target, showSignOut, onSignOut }) {
