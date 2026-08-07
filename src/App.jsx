@@ -8,6 +8,7 @@ import CommentsPage from './components/CommentsPage.jsx';
 import FeedbackWidget from './components/FeedbackWidget.jsx';
 import OverviewTab from './components/OverviewTab.jsx';
 import PageHeader from './components/PageHeader.jsx';
+import ReportsPage from './components/ReportsPage.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import TodayPage from './components/TodayPage.jsx';
 import WeeklyTab from './components/WeeklyTab.jsx';
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="clients/:clientSlug" element={<ClientPage />} />
         <Route path="comments" element={<CommentsPage />} />
         <Route path="assistant" element={<ChatPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
