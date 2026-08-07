@@ -69,7 +69,7 @@ export function weekClientBreakdown(w, itemsByClient, posts) {
     let done = 0;
     items.forEach((it) => {
       counts[it.format] = (counts[it.format] || 0) + 1;
-      if ((posts[postKey(client, it.num)] || 'Planned') === 'Published') done++;
+      if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') done++;
     });
     rows.push({ client, counts, total: items.length, done, blogCount: (BLOG_TARGETS[client] !== undefined ? weekBlogTotalForClient(w, client) : 0) });
   });
@@ -131,14 +131,14 @@ export function weekDone(w, itemsByClient, posts) {
   Object.keys(itemsByClient).forEach((client) => {
     (itemsByClient[client] || []).forEach((it) => {
       if (wkBucket(it.week) !== w) return;
-      if (posts[postKey(client, it.num)] === 'Published') done++;
+      if (posts[postKey(client, it.num)] === 'Approved') done++;
     });
   });
   return done;
 }
 
 // Items remaining, broken out by category — posts by format (not yet
-// Published), blog creatives (target minus published count per client), and
+// Approved), blog creatives (target minus approved count per client), and
 // "not yet planned" for target slots with no post created yet at all (e.g.
 // Fika Time's open weeks) — those have no format to bucket into, but still
 // count toward the total so this breakdown sums to the same number as the
@@ -148,7 +148,7 @@ export function remainingBreakdown(itemsByClient, posts, blogs) {
   Object.keys(itemsByClient).forEach((client) => {
     (itemsByClient[client] || []).forEach((it) => {
       const status = posts[postKey(client, it.num)] || 'Planned';
-      if (status !== 'Published') {
+      if (status !== 'Approved') {
         counts[it.format] = (counts[it.format] || 0) + 1;
       }
     });
@@ -178,7 +178,7 @@ export function totalTargets() {
 export function totalShipped(posts, blogs) {
   let n = 0;
   Object.values(posts).forEach((s) => {
-    if (s === 'Published') n++;
+    if (s === 'Approved') n++;
   });
   Object.values(blogs).forEach((c) => {
     n += c || 0;

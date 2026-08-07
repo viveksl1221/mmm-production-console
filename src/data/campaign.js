@@ -12,8 +12,9 @@
 // references (reference posts + music links), which the other clients don't.
 //
 // Note: there's deliberately no `status` field here — a post's status
-// (Planned/Drafted/.../Published) is tracked separately in Supabase via
-// useProductionState, keyed by client+num, not stored on the content item.
+// (Planned/Designed/Sent for Approval/Approved) is tracked separately in
+// Supabase via useProductionState, keyed by client+num, not stored on the
+// content item.
 
 // Which real calendar month/year this console is tracking.
 // Used only to detect "today" and highlight the current week.

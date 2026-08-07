@@ -1,3 +1,5 @@
+import { STATUSES } from './constants.js';
+
 // Fields a spreadsheet column can be mapped to. 'reference' is special: each
 // mapped reference column becomes one entry in the item's `references` list
 // (labeled with that column's own header), so multiple link/music columns
@@ -96,11 +98,9 @@ function blankItem() {
 // tracked separately via useProductionState. A mapped Status column comes
 // back as item._status (an ephemeral field, stripped before the item is
 // stored) so the caller can feed it into that separate pipeline instead.
-const KNOWN_STATUSES = ['Planned', 'Drafted', 'Sent to Client', 'Scheduled', 'Published'];
-
 export function normalizeStatus(raw) {
   const cleaned = String(raw || '').replace(/[^a-zA-Z\s]/g, '').trim().toLowerCase();
-  return KNOWN_STATUSES.find((s) => s.toLowerCase() === cleaned) || null;
+  return STATUSES.find((s) => s.toLowerCase() === cleaned) || null;
 }
 
 // columnMapping: array parallel to headerRow, one FIELD_OPTIONS key per column.

@@ -30,7 +30,7 @@ export default function ClientsTab() {
 
         let doneCount = 0;
         items.forEach((it) => {
-          if ((posts[postKey(client, it.num)] || 'Planned') === 'Published') doneCount++;
+          if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') doneCount++;
         });
 
         const postTarget = POST_TARGETS[client] || 0;

@@ -9,21 +9,23 @@ export const BATCH_TASK = {
   2: { name: 'Statics + Carousels', detail: 'Build all static and carousel visuals in one tool session' },
   3: { name: 'Reels', detail: 'Batch the Reel edits and exports' },
   4: { name: 'Blog Creatives', detail: 'Protected day — the longest single-asset lift' },
-  5: { name: 'Review & Schedule', detail: 'Client review sends, revisions, scheduling, QA' },
+  5: { name: 'Review & Send', detail: 'Final review, revisions, send for approval, QA' },
 };
 
-export const STATUSES = ['Planned', 'Drafted', 'Sent to Client', 'Scheduled', 'Published'];
+// The pipeline stops at Approved — there's no "sent to client"/"scheduled"/
+// "published" stage on this side; whatever happens after approval isn't
+// tracked here.
+export const STATUSES = ['Planned', 'Designed', 'Sent for Approval', 'Approved'];
 
 // Bg/fg/border ramp within the red/black/white palette only — no other
 // hues. Progress reads as weight, not color: lightest gray (Planned) to
-// solid black fill (Published), with red reserved for the one state that
-// means "waiting on someone outside the studio."
+// solid black fill (Approved), with red reserved for the one state that
+// means "waiting on someone else" (the account manager).
 export const STATUS_COLOR = {
   Planned: { bg: '#F5F5F5', fg: '#8A8A8A', bd: '#E7E7E7' },
-  Drafted: { bg: '#F0F0F0', fg: '#4A4A4A', bd: '#D8D8D8' },
-  'Sent to Client': { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
-  Scheduled: { bg: '#EDEDED', fg: '#171717', bd: '#D0D0D0' },
-  Published: { bg: '#171717', fg: '#FFFFFF', bd: '#171717' },
+  Designed: { bg: '#F0F0F0', fg: '#4A4A4A', bd: '#D8D8D8' },
+  'Sent for Approval': { bg: '#FFF1F0', fg: '#C93636', bd: '#FFD1CE' },
+  Approved: { bg: '#171717', fg: '#FFFFFF', bd: '#171717' },
 };
 
 export function nextStatus(current) {
@@ -33,7 +35,7 @@ export function nextStatus(current) {
 
 // Daily checklist progress (/today page) — a separate, simpler tracker from
 // the content pipeline above. Colors are deliberately reused from
-// STATUS_COLOR (Planned/Sent to Client/Published) rather than introducing
+// STATUS_COLOR (Planned/Sent for Approval/Approved) rather than introducing
 // new ones, keeping the palette consistent app-wide.
 export const DAILY_STATUS_LABEL = {
   not_started: 'Not Started',
