@@ -541,6 +541,36 @@ a.today-group-name:hover { color: var(--red); }
 .blog-hero-label { font-size: 12.5px; color: var(--ink-dim); margin-top: 6px; }
 .blog-hero-bar { margin-top: 14px; height: 8px; }
 
+/* ===== Brand Kit ===== */
+.brand-kit { background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 24px 26px; }
+.brand-kit-toolbar { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+.brand-kit .section-label:first-of-type { margin-top: 0; }
+.brand-kit .section-label { margin-top: 22px; }
+
+.brand-swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.brand-swatch {
+  height: 84px; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.08); cursor: pointer;
+  padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
+  text-align: left; transition: transform .12s ease, box-shadow .12s ease;
+}
+.brand-swatch:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.brand-swatch-label { font-size: 11.5px; font-weight: 700; }
+.brand-swatch-hex { font-size: 10.5px; opacity: 0.85; margin-top: 2px; }
+
+.brand-font-list { display: flex; flex-direction: column; gap: 8px; }
+.brand-font-row { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border: 1px solid var(--rule); border-radius: var(--radius-sm); }
+.brand-font-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-faint); flex-shrink: 0; width: 70px; }
+.brand-font-name { font-size: 15px; }
+
+.brand-notes-view { font-size: 13px; color: var(--ink-dim); white-space: pre-wrap; line-height: 1.6; }
+
+.brand-color-editor, .brand-font-editor { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.brand-color-edit-row, .brand-font-edit-row { display: flex; gap: 8px; align-items: center; }
+.brand-color-picker { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--rule); padding: 2px; cursor: pointer; flex-shrink: 0; }
+.brand-hex-input { max-width: 110px; }
+.brand-notes-edit { width: 100%; margin-top: 4px; }
+.brand-kit-save-bar { margin: 20px -26px -24px; border-radius: 0 0 var(--radius-md) var(--radius-md); }
+
 /* ===== Save/discard + delete confirm ===== */
 .edit-row-wrap.dirty { border-left: 3px solid var(--red); }
 .edit-row-wrap.dirty .edit-row { padding-left: 13px; }

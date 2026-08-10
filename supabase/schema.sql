@@ -97,12 +97,26 @@ create table if not exists extra_tasks (
   updated_at timestamptz not null default now()
 );
 
+-- Per-client brand reference — colors, fonts, and freeform notes — so brand
+-- details are a click away while designing instead of buried in a Drive
+-- folder. One row per client; colors/fonts are small enough to store as
+-- jsonb arrays rather than their own tables.
+create table if not exists brand_kits (
+  client text primary key,
+  colors jsonb not null default '[]'::jsonb,
+  fonts jsonb not null default '[]'::jsonb,
+  notes text not null default '',
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now()
+);
+
 alter table post_status enable row level security;
 alter table blog_counts enable row level security;
 alter table posts enable row level security;
 alter table daily_progress enable row level security;
 alter table comments enable row level security;
 alter table extra_tasks enable row level security;
+alter table brand_kits enable row level security;
 
 -- Anyone with the anon key can read everything. (Rename policies aren't
 -- required when you tighten this — see the header note — just swap the
@@ -220,6 +234,22 @@ create policy "can delete extra_tasks"
   to public
   using (true);
 
+create policy "can read brand_kits"
+  on brand_kits for select
+  to public
+  using (true);
+
+create policy "can upsert brand_kits"
+  on brand_kits for insert
+  to public
+  with check (true);
+
+create policy "can update brand_kits"
+  on brand_kits for update
+  to public
+  using (true)
+  with check (true);
+
 -- Enable realtime so teammates see each other's changes live.
 alter publication supabase_realtime add table post_status;
 alter publication supabase_realtime add table blog_counts;
@@ -227,3 +257,4 @@ alter publication supabase_realtime add table posts;
 alter publication supabase_realtime add table daily_progress;
 alter publication supabase_realtime add table comments;
 alter publication supabase_realtime add table extra_tasks;
+alter publication supabase_realtime add table brand_kits;

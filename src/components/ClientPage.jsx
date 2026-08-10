@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
+import { useBrandKits } from '../hooks/useBrandKits.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
 import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
+import BrandKitSection from './BrandKitSection.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 
 const FORMATS = ['Static', 'Carousel', 'Reel'];
@@ -213,17 +215,16 @@ function BlogSection({ client, blogTarget, blogCount, onBlogChange }) {
 
 export default function ClientPage() {
   const { clientSlug } = useParams();
-  const { posts, blogs, setPostStatus, setBlogCount, content } = useOutletContext();
+  const { posts, blogs, setPostStatus, setBlogCount, content, userId } = useOutletContext();
   const client = ALL_CLIENTS.find((c) => slug(c) === clientSlug);
   const [openNum, setOpenNum] = useState(null);
   const [pendingRemove, setPendingRemove] = useState(null);
+  const { getKit, saveKit } = useBrandKits(userId);
 
   const items = client ? content.getItems(client) : [];
   const hasP = client ? POST_TARGETS[client] !== undefined : false;
   const hasB = client ? BLOG_TARGETS[client] !== undefined : false;
-  const showTabs = hasP && hasB;
   const [section, setSection] = useState(null);
-  const activeSection = section || (hasP ? 'posts' : 'blog');
 
   if (!client) {
     return (
@@ -237,21 +238,32 @@ export default function ClientPage() {
   const blogCount = blogs[client] || 0;
   const removeTarget = pendingRemove != null ? items.find((it) => it.num === pendingRemove) : null;
 
+  // Brand Kit is always available, even for clients with only posts or only
+  // blog creatives — the previous "only show tabs if both sections exist"
+  // rule would've hidden it (and the tab bar entirely) for those clients.
+  const tabs = [
+    hasP && { key: 'posts', label: 'Posts', count: items.length },
+    hasB && { key: 'blog', label: 'Blog Creatives', count: `${blogCount}/${blogTarget}` },
+    { key: 'brand', label: 'Brand Kit' },
+  ].filter(Boolean);
+  const activeSection = section || tabs[0].key;
+
   return (
     <div className="client-page">
-      {showTabs && (
-        <div className="section-tabs">
-          <button className={`section-tab ${activeSection === 'posts' ? 'active' : ''}`} onClick={() => setSection('posts')}>
-            Posts <span className="section-tab-count">{items.length}</span>
+      <div className="section-tabs">
+        {tabs.map((t) => (
+          <button key={t.key} className={`section-tab ${activeSection === t.key ? 'active' : ''}`} onClick={() => setSection(t.key)}>
+            {t.label} {t.count != null && <span className="section-tab-count">{t.count}</span>}
           </button>
-          <button className={`section-tab ${activeSection === 'blog' ? 'active' : ''}`} onClick={() => setSection('blog')}>
-            Blog Creatives <span className="section-tab-count">{blogCount}/{blogTarget}</span>
-          </button>
-        </div>
-      )}
+        ))}
+      </div>
 
       {activeSection === 'blog' && hasB && (
         <BlogSection client={client} blogTarget={blogTarget} blogCount={blogCount} onBlogChange={setBlogCount} />
+      )}
+
+      {activeSection === 'brand' && (
+        <BrandKitSection kit={getKit(client)} onSave={(draft) => saveKit(client, draft)} />
       )}
 
       {activeSection === 'posts' && hasP && (
