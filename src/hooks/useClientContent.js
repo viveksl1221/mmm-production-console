@@ -26,6 +26,7 @@ function fromRow(row) {
     date: row.date,
     notes: row.notes,
     references: row.reference_links || [],
+    assetUrl: row.asset_url || null,
   };
 }
 
@@ -48,6 +49,7 @@ function toRow(client, item, userId) {
     date: item.date || '',
     notes: item.notes || '',
     reference_links: item.references || [],
+    asset_url: item.assetUrl || null,
     updated_by: userId,
     updated_at: new Date().toISOString(),
   };
@@ -57,7 +59,7 @@ function blankItem(num) {
   return {
     num, week: 1, platform: 'Instagram', format: 'Static', audience: '', funnel: '', pillar: '',
     topic: '', hook: '', breakdown: '', visualDirection: '', cta: '',
-    assignee: '', date: '', notes: '', references: [],
+    assignee: '', date: '', notes: '', references: [], assetUrl: null,
   };
 }
 

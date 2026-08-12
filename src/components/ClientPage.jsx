@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
 import { useBrandKits } from '../hooks/useBrandKits.js';
+import { uploadPostAsset } from '../lib/assetUpload.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
 import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
 import BrandKitSection from './BrandKitSection.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import GridPreview from './GridPreview.jsx';
 
 const FORMATS = ['Static', 'Carousel', 'Reel'];
 const WEEKS = [1, 2, 3, 4, 5];
@@ -17,6 +19,53 @@ function DetailField({ label, children }) {
       <span className="detail-label">{label}</span>
       {children}
     </label>
+  );
+}
+
+// Uploads/replaces/removes the post's creative asset. Persists immediately
+// on change rather than going through the row's draft/dirty Save bar —
+// picking a file is already a deliberate, complete action, and gating it
+// behind an unrelated field's unsaved-changes state would mean a real
+// upload could get silently thrown away by a Discard click.
+function AssetUploadField({ client, item, onSaved }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const url = await uploadPostAsset(client, item.num, file);
+      onSaved(url);
+    } catch (err) {
+      console.error('Asset upload failed:', err);
+      setError('Upload failed — try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const label = item.format === 'Reel' ? 'Reel cover image' : 'Creative asset';
+
+  return (
+    <DetailField label={label}>
+      <div className="asset-field">
+        {item.assetUrl && <img className="asset-thumb" src={item.assetUrl} alt="" />}
+        <div className="asset-field-controls">
+          <label className="add-post-btn asset-upload-btn">
+            {uploading ? 'Uploading…' : item.assetUrl ? 'Replace' : 'Upload'}
+            <input type="file" accept="image/*" onChange={handleFile} disabled={uploading} hidden />
+          </label>
+          {item.assetUrl && !uploading && (
+            <button className="row-remove" title="Remove asset" onClick={() => onSaved(null)}>×</button>
+          )}
+        </div>
+        {error && <div className="asset-field-error">{error}</div>}
+      </div>
+    </DetailField>
   );
 }
 
@@ -57,7 +106,7 @@ function ReferencesEditor({ references, onChange }) {
   );
 }
 
-function EditableItemRow({ item, status, isOpen, onToggleOpen, onSave, onStatusChange, onRequestRemove }) {
+function EditableItemRow({ client, item, status, isOpen, onToggleOpen, onSave, onStatusChange, onRequestRemove, onAssetSaved }) {
   const col = STATUS_COLOR[status];
   const [draft, setDraft] = useState(item);
   const [dirty, setDirty] = useState(false);
@@ -174,6 +223,7 @@ function EditableItemRow({ item, status, isOpen, onToggleOpen, onSave, onStatusC
               <input className="edit-input" type="text" value={draft.visualDirection} onChange={(e) => change({ visualDirection: e.target.value })} />
             </DetailField>
           </div>
+          <AssetUploadField client={client} item={draft} onSaved={onAssetSaved} />
           <DetailField label="Notes">
             <textarea className="edit-textarea" value={draft.notes} onChange={(e) => change({ notes: e.target.value })} />
           </DetailField>
@@ -278,6 +328,7 @@ export default function ClientPage() {
   // rule would've hidden it (and the tab bar entirely) for those clients.
   const tabs = [
     hasP && { key: 'posts', label: 'Posts', count: items.length },
+    hasP && { key: 'grid', label: 'Grid Preview' },
     hasB && { key: 'blog', label: 'Blog Creatives', count: `${blogCount}/${blogTarget}` },
     { key: 'brand', label: 'Brand Kit' },
   ].filter(Boolean);
@@ -301,6 +352,8 @@ export default function ClientPage() {
         <BrandKitSection kit={getKit(client)} onSave={(draft) => saveKit(client, draft)} />
       )}
 
+      {activeSection === 'grid' && hasP && <GridPreview items={items} />}
+
       {activeSection === 'posts' && hasP && (
         <>
           <div className="edit-list">
@@ -310,6 +363,7 @@ export default function ClientPage() {
             {items.map((item) => (
               <EditableItemRow
                 key={item.num}
+                client={client}
                 item={item}
                 status={posts[postKey(client, item.num)] || 'Planned'}
                 isOpen={openNum === item.num}
@@ -317,6 +371,7 @@ export default function ClientPage() {
                 onSave={(draft) => content.updateItem(client, item.num, draft)}
                 onStatusChange={(next) => setPostStatus(client, item.num, next)}
                 onRequestRemove={() => setPendingRemove(item.num)}
+                onAssetSaved={(assetUrl) => content.updateItem(client, item.num, { assetUrl })}
               />
             ))}
           </div>

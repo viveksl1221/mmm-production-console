@@ -49,6 +49,10 @@ create table if not exists posts (
   date text not null default '',
   notes text not null default '',
   reference_links jsonb not null default '[]'::jsonb,
+  -- The finished Static/Carousel image, or a Reel's cover thumbnail —
+  -- feeds the Instagram grid preview. Public URL into the post-assets
+  -- Storage bucket (created below).
+  asset_url text,
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now(),
   primary key (client, num)
@@ -261,3 +265,30 @@ alter publication supabase_realtime add table daily_progress;
 alter publication supabase_realtime add table comments;
 alter publication supabase_realtime add table extra_tasks;
 alter publication supabase_realtime add table brand_kits;
+
+-- Public bucket for creative assets (post images / Reel covers) — open
+-- read/write to match the `to public` access model above.
+insert into storage.buckets (id, name, public)
+values ('post-assets', 'post-assets', true)
+on conflict (id) do nothing;
+
+create policy "public can read post-assets"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'post-assets');
+
+create policy "public can upload post-assets"
+  on storage.objects for insert
+  to public
+  with check (bucket_id = 'post-assets');
+
+create policy "public can update post-assets"
+  on storage.objects for update
+  to public
+  using (bucket_id = 'post-assets')
+  with check (bucket_id = 'post-assets');
+
+create policy "public can delete post-assets"
+  on storage.objects for delete
+  to public
+  using (bucket_id = 'post-assets');
