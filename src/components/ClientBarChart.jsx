@@ -4,8 +4,8 @@ import { weekClientBreakdown } from '../lib/derived.js';
 // BurnChart.jsx (which does the same thing per-week across the month),
 // just grouped by client instead. Used by the weekly scope of the Reports
 // page; weekClientBreakdown already returns exactly the shape needed.
-export default function ClientBarChart({ w, itemsByClient, posts }) {
-  const rows = weekClientBreakdown(w, itemsByClient, posts);
+export default function ClientBarChart({ w, itemsByClient, posts, blogPerWeek }) {
+  const rows = weekClientBreakdown(w, itemsByClient, posts, blogPerWeek);
   const W = 640, H = 180, padL = 36, padB = 34, padT = 12;
   const chartW = W - padL - 16, chartH = H - padT - padB;
   const n = Math.max(rows.length, 1);

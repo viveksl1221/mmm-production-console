@@ -7,7 +7,7 @@ import { postKey, slug } from '../lib/derived.js';
 import ImportModal from './ImportModal.jsx';
 
 export default function ClientsTab() {
-  const { posts, blogs, content, setPostStatus } = useOutletContext();
+  const { posts, blogs, content, setPostStatus, blogTargets } = useOutletContext();
   const [importOpen, setImportOpen] = useState(false);
 
   function exportAll() {
@@ -34,7 +34,7 @@ export default function ClientsTab() {
         });
 
         const postTarget = POST_TARGETS[client] || 0;
-        const blogTarget = BLOG_TARGETS[client] || 0;
+        const blogTarget = blogTargets[client] || 0;
         const blogCount = blogs[client] || 0;
         const totalDone = doneCount + blogCount;
         const totalTarget = postTarget + blogTarget;

@@ -29,8 +29,8 @@ function StatusPill({ status, onCycle }) {
 // Client groups + per-post rows for one week, with a click-to-cycle status
 // pill — same status set/order as ClientPage.jsx's EditableItemRow, just
 // status-only here (editing topic/hook stays on the Clients page).
-function WeekTaskSection({ w, itemsByClient, posts, setPostStatus }) {
-  const rows = weekClientBreakdown(w, itemsByClient, posts);
+function WeekTaskSection({ w, itemsByClient, posts, setPostStatus, blogPerWeek }) {
+  const rows = weekClientBreakdown(w, itemsByClient, posts, blogPerWeek);
   if (!rows.length) {
     return <div className="empty-state">No posts scheduled for this week yet.</div>;
   }
@@ -66,7 +66,7 @@ function WeekTaskSection({ w, itemsByClient, posts, setPostStatus }) {
 }
 
 export default function ReportsPage() {
-  const { posts, blogs, setPostStatus, content } = useOutletContext();
+  const { posts, blogs, setPostStatus, content, blogTargets, blogPerWeek } = useOutletContext();
   const { weekNum: currentWeek } = getTodayInfo();
   const [scope, setScope] = useState('weekly');
   const [week, setWeek] = useState(currentWeek || 1);
@@ -75,14 +75,14 @@ export default function ReportsPage() {
   const weeklyData = computeWeekly(content.itemsByClient);
   const isWeekly = scope === 'weekly';
 
-  const target = isWeekly ? weekTarget(week, weeklyData) : totalTargets();
+  const target = isWeekly ? weekTarget(week, weeklyData, blogPerWeek) : totalTargets(blogTargets);
   const done = isWeekly ? weekDone(week, content.itemsByClient, posts) : totalShipped(posts, blogs);
   const hours = isWeekly
-    ? weekMinutes(week, weeklyData)
-    : [1, 2, 3, 4].reduce((a, w) => a + weekMinutes(w, weeklyData), 0);
+    ? weekMinutes(week, weeklyData, blogPerWeek)
+    : [1, 2, 3, 4].reduce((a, w) => a + weekMinutes(w, weeklyData, blogPerWeek), 0);
 
   function openTextPreview() {
-    setReportText(buildReportText({ scope, week, itemsByClient: content.itemsByClient, posts, blogs, weeklyData }));
+    setReportText(buildReportText({ scope, week, itemsByClient: content.itemsByClient, posts, blogs, weeklyData, blogTargets, blogPerWeek }));
   }
 
   return (
@@ -128,21 +128,21 @@ export default function ReportsPage() {
         </div>
 
         {isWeekly ? (
-          <ClientBarChart w={week} itemsByClient={content.itemsByClient} posts={posts} />
+          <ClientBarChart w={week} itemsByClient={content.itemsByClient} posts={posts} blogPerWeek={blogPerWeek} />
         ) : (
-          <BurnChart posts={posts} itemsByClient={content.itemsByClient} weeklyData={weeklyData} />
+          <BurnChart posts={posts} itemsByClient={content.itemsByClient} weeklyData={weeklyData} blogPerWeek={blogPerWeek} />
         )}
 
         <div className="section-label report-section-label">Tasks</div>
         {isWeekly ? (
-          <WeekTaskSection w={week} itemsByClient={content.itemsByClient} posts={posts} setPostStatus={setPostStatus} />
+          <WeekTaskSection w={week} itemsByClient={content.itemsByClient} posts={posts} setPostStatus={setPostStatus} blogPerWeek={blogPerWeek} />
         ) : (
           [1, 2, 3, 4].map((w) => (
             <div className="report-month-week" key={w}>
               <div className="report-week-heading">
                 {WEEK_RANGES[w].label} <span className="mono">{WEEK_RANGES[w].start} – {WEEK_RANGES[w].end}</span>
               </div>
-              <WeekTaskSection w={w} itemsByClient={content.itemsByClient} posts={posts} setPostStatus={setPostStatus} />
+              <WeekTaskSection w={w} itemsByClient={content.itemsByClient} posts={posts} setPostStatus={setPostStatus} blogPerWeek={blogPerWeek} />
             </div>
           ))
         )}

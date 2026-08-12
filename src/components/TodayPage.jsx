@@ -111,7 +111,7 @@ function ClientGroup({ client, linkTo, children }) {
 // Week + day navigator — lets you browse and act on any day in the
 // campaign month, not just today. Each day tab shows its own task type and
 // done/total so you can see at a glance what's still open days out.
-function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, itemsByClient, progressByKey }) {
+function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, itemsByClient, progressByKey, blogPerWeek }) {
   return (
     <div className="cal-strip">
       <div className="cal-week-tabs">
@@ -128,7 +128,7 @@ function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, item
       <div className="cal-day-tabs">
         {[1, 2, 3, 4, 5].map((wd) => {
           const iso = isoDateForWeekday(selWeek, wd);
-          const counts = todaysCounts(itemsByClient, selWeek, wd, iso, progressByKey);
+          const counts = todaysCounts(itemsByClient, selWeek, wd, iso, progressByKey, blogPerWeek);
           const isToday = today.isoDate === iso;
           return (
             <button
@@ -153,7 +153,7 @@ function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, item
 }
 
 export default function TodayPage() {
-  const { userId, content, posts } = useOutletContext();
+  const { userId, content, posts, blogPerWeek } = useOutletContext();
   const today = getTodayInfo();
   const [selWeek, setSelWeek] = useState(today.weekNum || 1);
   const [selDay, setSelDay] = useState(today.weekday >= 1 && today.weekday <= 5 ? today.weekday : 1);
@@ -178,7 +178,7 @@ export default function TodayPage() {
   // Computed once at the top so both the checklist body and the summary
   // preview read the same carried-over list.
   const carried = !loading && today.weekNum
-    ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey)
+    ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey, blogPerWeek)
     : [];
 
   let calendarBody;
@@ -188,13 +188,13 @@ export default function TodayPage() {
     const task = BATCH_TASK[selDay];
     const isBlogDay = selDay === 4;
     const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, selWeek, selDay);
-    const blogRows = isBlogDay ? todaysBlogTasks(selWeek) : [];
+    const blogRows = isBlogDay ? todaysBlogTasks(selWeek, blogPerWeek) : [];
     const carriedForToday = isViewingToday ? carried : [];
     const carriedPosts = carriedForToday.filter((r) => !r.isBlog);
     const carriedBlogs = carriedForToday.filter((r) => r.isBlog);
 
     const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
-      todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey);
+      todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey, blogPerWeek);
     const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
     const loggedSeconds =
       postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${r.client}::${r.item.num}`]), 0) +
@@ -390,6 +390,7 @@ export default function TodayPage() {
         today={today}
         itemsByClient={content.itemsByClient}
         progressByKey={progressByKey}
+        blogPerWeek={blogPerWeek}
       />
 
       {calendarBody}

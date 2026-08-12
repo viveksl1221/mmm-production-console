@@ -1,12 +1,12 @@
 import { WEEK_RANGES } from '../data/campaign.js';
 import { fmtHours, getTodayInfo, remainingBreakdown, totalTargets, totalShipped, weekDone, weekTarget, weekMinutes } from '../lib/derived.js';
 
-export default function StatGrid({ posts, blogs, itemsByClient, weeklyData }) {
-  const target = totalTargets();
+export default function StatGrid({ posts, blogs, itemsByClient, weeklyData, blogTargets, blogPerWeek }) {
+  const target = totalTargets(blogTargets);
   const shipped = totalShipped(posts, blogs);
   const { weekNum } = getTodayInfo();
   const wk = weekNum || 1;
-  const remaining = remainingBreakdown(itemsByClient, posts, blogs);
+  const remaining = remainingBreakdown(itemsByClient, posts, blogs, blogTargets);
 
   return (
     <div className="stat-grid">
@@ -27,10 +27,10 @@ export default function StatGrid({ posts, blogs, itemsByClient, weeklyData }) {
       </div>
       <div className="stat-card">
         <div className="n mono">{WEEK_RANGES[wk].label}</div>
-        <div className="l">{weekDone(wk, itemsByClient, posts)}/{weekTarget(wk, weeklyData)} this week</div>
+        <div className="l">{weekDone(wk, itemsByClient, posts)}/{weekTarget(wk, weeklyData, blogPerWeek)} this week</div>
       </div>
       <div className="stat-card">
-        <div className="n mono">~{fmtHours(weekMinutes(wk, weeklyData))}</div>
+        <div className="n mono">~{fmtHours(weekMinutes(wk, weeklyData, blogPerWeek))}</div>
         <div className="l">est. hours this week</div>
       </div>
     </div>

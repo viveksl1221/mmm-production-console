@@ -537,7 +537,17 @@ a.today-group-name:hover { color: var(--red); }
 }
 .blog-hero { flex: 1; max-width: 320px; }
 .blog-hero-num { font-family: var(--font-heading); font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -0.5px; }
-.blog-hero-target { font-size: 20px; font-weight: 400; color: var(--ink-faint); margin-left: 4px; }
+.blog-hero-target {
+  font-size: 20px; font-weight: 400; color: var(--ink-faint); margin-left: 4px;
+  background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; transition: color .15s ease;
+}
+.blog-hero-target:hover { color: var(--red); }
+.blog-target-input {
+  width: 54px; font-size: 20px; font-weight: 400; font-family: var(--font-heading);
+  color: var(--ink); border: none; border-bottom: 2px solid var(--red); margin-left: 4px;
+  background: none; padding: 0 0 0 2px;
+}
+.blog-target-input:focus { outline: none; }
 .blog-hero-label { font-size: 12.5px; color: var(--ink-dim); margin-top: 6px; }
 .blog-hero-bar { margin-top: 14px; height: 8px; }
 

@@ -6,15 +6,15 @@ import StatGrid from './StatGrid.jsx';
 import TodayCard from './TodayCard.jsx';
 
 export default function OverviewTab() {
-  const { posts, blogs, content, userId } = useOutletContext();
+  const { posts, blogs, content, userId, blogTargets, blogPerWeek } = useOutletContext();
   const weeklyData = computeWeekly(content.itemsByClient);
   return (
     <>
-      <TodayCard itemsByClient={content.itemsByClient} userId={userId} />
-      <StatGrid posts={posts} blogs={blogs} itemsByClient={content.itemsByClient} weeklyData={weeklyData} />
-      <BurnChart posts={posts} itemsByClient={content.itemsByClient} weeklyData={weeklyData} />
+      <TodayCard itemsByClient={content.itemsByClient} userId={userId} blogPerWeek={blogPerWeek} />
+      <StatGrid posts={posts} blogs={blogs} itemsByClient={content.itemsByClient} weeklyData={weeklyData} blogTargets={blogTargets} blogPerWeek={blogPerWeek} />
+      <BurnChart posts={posts} itemsByClient={content.itemsByClient} weeklyData={weeklyData} blogPerWeek={blogPerWeek} />
       <div className="section-label">Needs attention</div>
-      <AttentionList weeklyData={weeklyData} />
+      <AttentionList weeklyData={weeklyData} blogPerWeek={blogPerWeek} />
     </>
   );
 }

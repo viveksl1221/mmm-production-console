@@ -15,30 +15,39 @@ import WeeklyTab from './components/WeeklyTab.jsx';
 import { useAuth } from './hooks/useAuth.js';
 import { useClientContent } from './hooks/useClientContent.js';
 import { useProductionState } from './hooks/useProductionState.js';
-import { totalShipped, totalTargets } from './lib/derived.js';
+import { computeBlogPerWeek, effectiveBlogTargets, totalShipped, totalTargets } from './lib/derived.js';
 
 function ConsoleLayout({ userId, onSignOut }) {
-  const { posts, blogs, loading, setPostStatus, setBlogCount } = useProductionState(userId);
+  const { posts, blogs, blogTargets, loading, setPostStatus, setBlogCount, setBlogTarget } = useProductionState(userId);
   const content = useClientContent(userId);
   const location = useLocation();
   const showFeedbackWidget = location.pathname !== '/comments';
   const showAssistantWidget = location.pathname !== '/assistant';
 
+  // The campaign.js defaults merged with any live per-client overrides —
+  // computed once here so every page reads the same numbers instead of
+  // each recomputing (and potentially drifting) its own merge.
+  const effectiveTargets = effectiveBlogTargets(blogTargets);
+  const blogPerWeek = computeBlogPerWeek(effectiveTargets);
+
   return (
     <div id="console-root">
       <Sidebar
         shipped={totalShipped(posts, blogs)}
-        target={totalTargets()}
+        target={totalTargets(effectiveTargets)}
         showSignOut={!!onSignOut}
         onSignOut={onSignOut}
       />
       <main className="main">
-        <PageHeader posts={posts} blogs={blogs} content={content} />
+        <PageHeader posts={posts} blogs={blogs} content={content} blogTargets={effectiveTargets} />
         <div className="main-scroll">
           {loading || content.loading ? (
             <div className="loading-state">Loading…</div>
           ) : (
-            <Outlet context={{ posts, blogs, setPostStatus, setBlogCount, content, userId }} />
+            <Outlet context={{
+              posts, blogs, setPostStatus, setBlogCount, content, userId,
+              blogTargets: effectiveTargets, setBlogTarget, blogPerWeek,
+            }} />
           )}
         </div>
       </main>

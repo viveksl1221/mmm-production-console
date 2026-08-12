@@ -15,7 +15,7 @@ function AttentionItem({ type, typeLabel, children, onOpen }) {
   );
 }
 
-export default function AttentionList({ weeklyData }) {
+export default function AttentionList({ weeklyData, blogPerWeek }) {
   const navigate = useNavigate();
   const items = [];
 
@@ -33,7 +33,7 @@ export default function AttentionList({ weeklyData }) {
   });
 
   [1, 2, 3, 4].forEach((w) => {
-    if (weekMinutes(w, weeklyData) / 60 > 32) {
+    if (weekMinutes(w, weeklyData, blogPerWeek) / 60 > 32) {
       items.push(
         <AttentionItem
           key={`week-${w}`}
@@ -41,7 +41,7 @@ export default function AttentionList({ weeklyData }) {
           typeLabel="Workload"
           onOpen={() => navigate('/weekly', { state: { openWeek: w } })}
         >
-          {WEEK_RANGES[w].label} runs <b>~{fmtHours(weekMinutes(w, weeklyData))}</b> of production — plan the extra time
+          {WEEK_RANGES[w].label} runs <b>~{fmtHours(weekMinutes(w, weeklyData, blogPerWeek))}</b> of production — plan the extra time
         </AttentionItem>
       );
     }

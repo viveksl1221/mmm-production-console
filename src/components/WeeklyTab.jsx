@@ -4,7 +4,7 @@ import { FIKA_GAP, WEEK_RANGES } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { BATCH_TASK, TIME_MIN } from '../lib/constants.js';
 import {
-  blogPerWeek, computeWeekly, dayFormatPriority, fmtHours, getTodayInfo, slug, weekBlogTotal,
+  computeWeekly, dayFormatPriority, fmtHours, getTodayInfo, slug, weekBlogTotal,
   weekClientBreakdown, weekDone, weekMinutes, weekPostTotal, weekTarget,
 } from '../lib/derived.js';
 
@@ -82,19 +82,19 @@ function ScheduleDay({ dayNum, tag, sub, task, hours, detail, priority, isToday 
   );
 }
 
-function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek }) {
+function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek, blogPerWeek }) {
   const { weekday } = getTodayInfo();
   const todayDayNum = isCurrentWeek ? weekday : null; // 1=Mon...5=Fri (0=Sun, 6=Sat -> no match)
   const weeklyData = computeWeekly(itemsByClient);
   const f = weeklyData[w];
   const scMin = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel;
   const reelMin = (f.Reel || 0) * TIME_MIN.Reel;
-  const blogMin = weekBlogTotal(w) * TIME_MIN.Blog;
+  const blogMin = weekBlogTotal(w, blogPerWeek) * TIME_MIN.Blog;
 
   const postPriority = dayFormatPriority(w, itemsByClient, ['Static', 'Carousel', 'Reel']);
   const scPriority = dayFormatPriority(w, itemsByClient, ['Static', 'Carousel']);
   const reelPriority = dayFormatPriority(w, itemsByClient, ['Reel']);
-  const blogPriority = Object.entries(blogPerWeek[w])
+  const blogPriority = Object.entries(blogPerWeek[w] || {})
     .filter(([, count]) => count > 0)
     .map(([client, count]) => ({ client, count }))
     .sort((a, b) => b.count - a.count);
@@ -131,7 +131,7 @@ function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek }) {
         dayNum="04" tag="Thu" sub="blog creatives"
         task={BATCH_TASK[4].name}
         hours={blogMin}
-        detail={`${weekBlogTotal(w)} blog creatives across ${blogPriority.length} client${blogPriority.length === 1 ? '' : 's'}`}
+        detail={`${weekBlogTotal(w, blogPerWeek)} blog creatives across ${blogPriority.length} client${blogPriority.length === 1 ? '' : 's'}`}
         priority={blogPriority}
         isToday={todayDayNum === 4}
       />
@@ -146,12 +146,12 @@ function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek }) {
   );
 }
 
-function WeekCard({ w, isCurrent, isOpen, onToggle, itemsByClient, posts, weeklyData }) {
-  const target = weekTarget(w, weeklyData);
+function WeekCard({ w, isCurrent, isOpen, onToggle, itemsByClient, posts, weeklyData, blogPerWeek }) {
+  const target = weekTarget(w, weeklyData, blogPerWeek);
   const done = weekDone(w, itemsByClient, posts);
   const pct = target ? Math.round((done / target) * 100) : 0;
   const r = WEEK_RANGES[w];
-  const clientRows = weekClientBreakdown(w, itemsByClient, posts);
+  const clientRows = weekClientBreakdown(w, itemsByClient, posts, blogPerWeek);
 
   return (
     <div className={`wk-card ${isCurrent ? 'current' : ''} ${isOpen ? 'open' : ''}`} data-week={w}>
@@ -175,17 +175,17 @@ function WeekCard({ w, isCurrent, isOpen, onToggle, itemsByClient, posts, weekly
         <ClientBreakdown w={w} rows={clientRows} />
 
         {FIKA_GAP[w] && <div className="note">Includes {FIKA_GAP[w]} Fika Time slots with no topic yet — plan these Monday, before the rest of the week's copy.</div>}
-        {weekMinutes(w, weeklyData) / 60 > 32 && <div className="note">~{fmtHours(weekMinutes(w, weeklyData))} of production this week (~{(weekMinutes(w, weeklyData) / 60 / 5).toFixed(1)}h/day across a 5-day batch).</div>}
+        {weekMinutes(w, weeklyData, blogPerWeek) / 60 > 32 && <div className="note">~{fmtHours(weekMinutes(w, weeklyData, blogPerWeek))} of production this week (~{(weekMinutes(w, weeklyData, blogPerWeek) / 60 / 5).toFixed(1)}h/day across a 5-day batch).</div>}
 
         <div className="section-label wk-section-label">Batch schedule</div>
-        <BatchSchedule w={w} itemsByClient={itemsByClient} clientRows={clientRows} isCurrentWeek={isCurrent} />
+        <BatchSchedule w={w} itemsByClient={itemsByClient} clientRows={clientRows} isCurrentWeek={isCurrent} blogPerWeek={blogPerWeek} />
       </div>
     </div>
   );
 }
 
 export default function WeeklyTab() {
-  const { posts, content } = useOutletContext();
+  const { posts, content, blogPerWeek } = useOutletContext();
   const location = useLocation();
   const { weekNum: current } = getTodayInfo();
   const cur = current || 1;
@@ -215,6 +215,7 @@ export default function WeeklyTab() {
           itemsByClient={content.itemsByClient}
           posts={posts}
           weeklyData={weeklyData}
+          blogPerWeek={blogPerWeek}
         />
       ))}
     </>

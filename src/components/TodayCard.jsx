@@ -49,7 +49,7 @@ function TodayDonut({ done, remaining, total }) {
   );
 }
 
-export default function TodayCard({ itemsByClient, userId }) {
+export default function TodayCard({ itemsByClient, userId, blogPerWeek }) {
   const navigate = useNavigate();
   const { weekday, weekNum, isoDate } = getTodayInfo();
   const { progressByKey, loading } = useDailyProgress(isoDate, isoDate, userId);
@@ -74,7 +74,7 @@ export default function TodayCard({ itemsByClient, userId }) {
   }
 
   const task = BATCH_TASK[weekday];
-  const counts = !loading ? todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey) : null;
+  const counts = !loading ? todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) : null;
   const hasCounts = counts && counts.total > 0;
 
   return (

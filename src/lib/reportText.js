@@ -10,17 +10,17 @@ function fmtGeneratedAt() {
   return new Date().toLocaleString([], { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function weekSectionLines(w, itemsByClient, posts, weeklyData) {
+function weekSectionLines(w, itemsByClient, posts, weeklyData, blogPerWeek) {
   const lines = [];
   const r = WEEK_RANGES[w];
-  const target = weekTarget(w, weeklyData);
+  const target = weekTarget(w, weeklyData, blogPerWeek);
   const done = weekDone(w, itemsByClient, posts);
 
   lines.push(`${r.label.toUpperCase()} (${r.start} – ${r.end})`);
-  lines.push(`${done}/${target} shipped · ~${fmtHours(weekMinutes(w, weeklyData))} estimated production`);
+  lines.push(`${done}/${target} shipped · ~${fmtHours(weekMinutes(w, weeklyData, blogPerWeek))} estimated production`);
   lines.push('');
 
-  const rows = weekClientBreakdown(w, itemsByClient, posts);
+  const rows = weekClientBreakdown(w, itemsByClient, posts, blogPerWeek);
   if (!rows.length) {
     lines.push('No posts scheduled for this week yet.');
     lines.push('');
@@ -43,7 +43,7 @@ function weekSectionLines(w, itemsByClient, posts, weeklyData) {
 }
 
 // scope: 'weekly' | 'monthly'. week is required for 'weekly'.
-export function buildReportText({ scope, week, itemsByClient, posts, blogs, weeklyData }) {
+export function buildReportText({ scope, week, itemsByClient, posts, blogs, weeklyData, blogTargets, blogPerWeek }) {
   const lines = [];
 
   if (scope === 'weekly') {
@@ -55,12 +55,12 @@ export function buildReportText({ scope, week, itemsByClient, posts, blogs, week
   lines.push('');
 
   if (scope === 'weekly') {
-    lines.push(...weekSectionLines(week, itemsByClient, posts, weeklyData));
+    lines.push(...weekSectionLines(week, itemsByClient, posts, weeklyData, blogPerWeek));
   } else {
-    lines.push(`OVERALL — ${totalShipped(posts, blogs)}/${totalTargets()} shipped this month`);
+    lines.push(`OVERALL — ${totalShipped(posts, blogs)}/${totalTargets(blogTargets)} shipped this month`);
     lines.push('');
     [1, 2, 3, 4].forEach((w) => {
-      lines.push(...weekSectionLines(w, itemsByClient, posts, weeklyData));
+      lines.push(...weekSectionLines(w, itemsByClient, posts, weeklyData, blogPerWeek));
     });
   }
 

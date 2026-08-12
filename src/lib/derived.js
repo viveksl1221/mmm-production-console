@@ -60,7 +60,8 @@ export function computeWeekly(itemsByClient) {
 
 // Per-client detail for one week — the "who's doing what" breakdown used by
 // the Weekly Plan page. Sorted by post count, busiest client first.
-export function weekClientBreakdown(w, itemsByClient, posts) {
+// blogPerWeek is the shape computeBlogPerWeek() returns — see below.
+export function weekClientBreakdown(w, itemsByClient, posts, blogPerWeek) {
   const rows = [];
   Object.keys(itemsByClient).forEach((client) => {
     const items = (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w);
@@ -71,7 +72,7 @@ export function weekClientBreakdown(w, itemsByClient, posts) {
       counts[it.format] = (counts[it.format] || 0) + 1;
       if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') done++;
     });
-    rows.push({ client, counts, total: items.length, done, blogCount: (BLOG_TARGETS[client] !== undefined ? weekBlogTotalForClient(w, client) : 0) });
+    rows.push({ client, counts, total: items.length, done, blogCount: blogPerWeek?.[w]?.[client] || 0 });
   });
   return rows.sort((a, b) => b.total - a.total);
 }
@@ -93,35 +94,51 @@ export function dayFormatPriority(w, itemsByClient, formats) {
     .sort((a, b) => b.count - a.count);
 }
 
-export const blogPerWeek = { 1: {}, 2: {}, 3: {}, 4: {} };
-Object.keys(BLOG_TARGETS).forEach((client) => {
-  const target = BLOG_TARGETS[client];
-  const base = Math.floor(target / 4);
-  let rem = target - base * 4;
-  for (let w = 1; w <= 4; w++) {
-    blogPerWeek[w][client] = base + (rem > 0 ? 1 : 0);
-    if (rem > 0) rem--;
-  }
-});
-
-function weekBlogTotalForClient(w, client) {
-  return blogPerWeek[w][client] || 0;
+// Merges live per-client target overrides (from blog_counts.target — see
+// useProductionState) on top of the campaign.js defaults. This is the
+// "effective" target used everywhere a blog target is displayed or used
+// for scheduling math, so raising a client's target in the UI propagates
+// consistently instead of only affecting the counter it was edited from.
+export function effectiveBlogTargets(blogTargetOverrides) {
+  const merged = { ...BLOG_TARGETS };
+  Object.keys(blogTargetOverrides || {}).forEach((client) => {
+    if (blogTargetOverrides[client] != null) merged[client] = blogTargetOverrides[client];
+  });
+  return merged;
 }
 
-export function weekBlogTotal(w) {
-  return Object.values(blogPerWeek[w]).reduce((a, b) => a + b, 0);
+// Splits each client's effective monthly blog target evenly across the 4
+// weeks — {1:{client:count},2:{...},3:{...},4:{...}}. Recomputed from
+// live targets rather than a static module-level constant so a raised
+// target reflows the week-by-week scheduling too, not just the total.
+export function computeBlogPerWeek(blogTargets) {
+  const perWeek = { 1: {}, 2: {}, 3: {}, 4: {} };
+  Object.keys(blogTargets).forEach((client) => {
+    const target = blogTargets[client];
+    const base = Math.floor(target / 4);
+    let rem = target - base * 4;
+    for (let w = 1; w <= 4; w++) {
+      perWeek[w][client] = base + (rem > 0 ? 1 : 0);
+      if (rem > 0) rem--;
+    }
+  });
+  return perWeek;
+}
+
+export function weekBlogTotal(w, blogPerWeek) {
+  return Object.values(blogPerWeek?.[w] || {}).reduce((a, b) => a + b, 0);
 }
 export function weekPostTotal(w, weeklyData) {
   const f = weeklyData[w];
   return (f.Static || 0) + (f.Carousel || 0) + (f.Reel || 0) + (FIKA_GAP[w] || 0);
 }
-export function weekTarget(w, weeklyData) {
-  return weekPostTotal(w, weeklyData) + weekBlogTotal(w);
+export function weekTarget(w, weeklyData, blogPerWeek) {
+  return weekPostTotal(w, weeklyData) + weekBlogTotal(w, blogPerWeek);
 }
-export function weekMinutes(w, weeklyData) {
+export function weekMinutes(w, weeklyData, blogPerWeek) {
   const f = weeklyData[w];
   let m = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel + (f.Reel || 0) * TIME_MIN.Reel;
-  m += weekBlogTotal(w) * TIME_MIN.Blog;
+  m += weekBlogTotal(w, blogPerWeek) * TIME_MIN.Blog;
   m += (FIKA_GAP[w] || 0) * TIME_MIN.Gap;
   return m;
 }
@@ -143,7 +160,7 @@ export function weekDone(w, itemsByClient, posts) {
 // Fika Time's open weeks) — those have no format to bucket into, but still
 // count toward the total so this breakdown sums to the same number as the
 // plain target-based "items remaining" stat.
-export function remainingBreakdown(itemsByClient, posts, blogs) {
+export function remainingBreakdown(itemsByClient, posts, blogs, blogTargets) {
   const counts = { Carousel: 0, Static: 0, Reel: 0 };
   Object.keys(itemsByClient).forEach((client) => {
     (itemsByClient[client] || []).forEach((it) => {
@@ -161,17 +178,17 @@ export function remainingBreakdown(itemsByClient, posts, blogs) {
   });
 
   let blogRemaining = 0;
-  Object.keys(BLOG_TARGETS).forEach((client) => {
-    blogRemaining += Math.max(0, BLOG_TARGETS[client] - (blogs[client] || 0));
+  Object.keys(blogTargets).forEach((client) => {
+    blogRemaining += Math.max(0, blogTargets[client] - (blogs[client] || 0));
   });
 
   return { ...counts, 'Not Yet Planned': notYetPlanned, 'Blog Creative': blogRemaining };
 }
 
-export function totalTargets() {
+export function totalTargets(blogTargets) {
   let t = 0;
   Object.values(POST_TARGETS).forEach((v) => (t += v));
-  Object.values(BLOG_TARGETS).forEach((v) => (t += v));
+  Object.values(blogTargets).forEach((v) => (t += v));
   return t;
 }
 
@@ -223,8 +240,8 @@ export function todaysItems(itemsByClient, weekNum, weekday) {
 
 // Thursday only: per-client blog creative counts due this week (no
 // individual item records exist for blogs, so this is count-based).
-export function todaysBlogTasks(weekNum) {
-  if (!weekNum || !blogPerWeek[weekNum]) return [];
+export function todaysBlogTasks(weekNum, blogPerWeek) {
+  if (!weekNum || !blogPerWeek?.[weekNum]) return [];
   return Object.entries(blogPerWeek[weekNum])
     .filter(([, count]) => count > 0)
     .map(([client, count]) => ({ client, count, timeMin: count * TIME_MIN.Blog }))
@@ -243,10 +260,10 @@ export function blogProgressKey(client) {
 // numbers off the same daily_progress state. progressByKey is keyed
 // "workDate::client::num" (see useDailyProgress), so isoDate is required to
 // look today's rows up correctly.
-export function todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey) {
+export function todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) {
   const isBlogDay = weekday === 4;
   const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, weekday);
-  const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
+  const blogRows = isBlogDay ? todaysBlogTasks(weekNum, blogPerWeek) : [];
 
   const statuses = [
     ...postRows.map((r) => progressByKey[`${isoDate}::${r.client}::${r.item.num}`]?.status || 'not_started'),
@@ -313,20 +330,20 @@ function weekdaysBeforeToday(isoDate, weekday) {
 // on Tuesday when its actual production day (Wednesday) hasn't happened
 // yet. Dedupes against whatever's already in today's own list so nothing
 // doubles up on Friday, which naturally re-sweeps everything anyway.
-export function carriedOverRows(itemsByClient, weekNum, weekday, isoDate, progressByKey) {
+export function carriedOverRows(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) {
   if (!weekNum || weekday === 0 || weekday === 6) return [];
 
   const todayKeys = new Set();
   const isBlogDayToday = weekday === 4;
   (isBlogDayToday ? [] : todaysItems(itemsByClient, weekNum, weekday)).forEach((r) => todayKeys.add(`${r.client}::${r.item.num}`));
-  (isBlogDayToday ? todaysBlogTasks(weekNum) : []).forEach((r) => todayKeys.add(`${blogProgressKey(r.client)}::0`));
+  (isBlogDayToday ? todaysBlogTasks(weekNum, blogPerWeek) : []).forEach((r) => todayKeys.add(`${blogProgressKey(r.client)}::0`));
 
   const rows = [];
   weekdaysBeforeToday(isoDate, weekday).forEach(({ weekday: wd, isoDate: dueDate }) => {
     if (wd === 1) return; // Monday's copy pass isn't a per-format production deadline
     const isBlogDay = wd === 4;
     const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, wd);
-    const blogRows = isBlogDay ? todaysBlogTasks(weekNum) : [];
+    const blogRows = isBlogDay ? todaysBlogTasks(weekNum, blogPerWeek) : [];
 
     postRows.forEach((r) => {
       const itemKey = `${r.client}::${r.item.num}`;

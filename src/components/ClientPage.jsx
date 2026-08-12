@@ -196,12 +196,47 @@ function EditableItemRow({ item, status, isOpen, onToggleOpen, onSave, onStatusC
   );
 }
 
-function BlogSection({ client, blogTarget, blogCount, onBlogChange }) {
+function BlogSection({ client, blogTarget, blogCount, onBlogChange, onTargetChange }) {
   const pct = blogTarget ? Math.min(100, Math.round((blogCount / blogTarget) * 100)) : 0;
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [targetDraft, setTargetDraft] = useState(String(blogTarget));
+
+  function openEdit() {
+    setTargetDraft(String(blogTarget));
+    setEditingTarget(true);
+  }
+
+  function commitTarget() {
+    setEditingTarget(false);
+    const n = parseInt(targetDraft, 10);
+    if (Number.isFinite(n) && n >= 0 && n !== blogTarget) {
+      onTargetChange(client, n);
+    }
+  }
+
   return (
     <div className="blog-section">
       <div className="blog-hero">
-        <div className="blog-hero-num mono">{blogCount}<span className="blog-hero-target">/ {blogTarget}</span></div>
+        <div className="blog-hero-num mono">
+          {blogCount}
+          {editingTarget ? (
+            <input
+              type="number"
+              min="0"
+              className="blog-target-input"
+              autoFocus
+              value={targetDraft}
+              onChange={(e) => setTargetDraft(e.target.value)}
+              onBlur={commitTarget}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitTarget();
+                if (e.key === 'Escape') setEditingTarget(false);
+              }}
+            />
+          ) : (
+            <button className="blog-hero-target" onClick={openEdit} title="Edit target">/ {blogTarget}</button>
+          )}
+        </div>
         <div className="blog-hero-label">Blog creatives published this month</div>
         <div className="bar-track blog-hero-bar"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
       </div>
@@ -215,7 +250,7 @@ function BlogSection({ client, blogTarget, blogCount, onBlogChange }) {
 
 export default function ClientPage() {
   const { clientSlug } = useParams();
-  const { posts, blogs, setPostStatus, setBlogCount, content, userId } = useOutletContext();
+  const { posts, blogs, setPostStatus, setBlogCount, setBlogTarget, content, userId, blogTargets } = useOutletContext();
   const client = ALL_CLIENTS.find((c) => slug(c) === clientSlug);
   const [openNum, setOpenNum] = useState(null);
   const [pendingRemove, setPendingRemove] = useState(null);
@@ -234,7 +269,7 @@ export default function ClientPage() {
     );
   }
 
-  const blogTarget = BLOG_TARGETS[client] || 0;
+  const blogTarget = blogTargets[client] || 0;
   const blogCount = blogs[client] || 0;
   const removeTarget = pendingRemove != null ? items.find((it) => it.num === pendingRemove) : null;
 
@@ -259,7 +294,7 @@ export default function ClientPage() {
       </div>
 
       {activeSection === 'blog' && hasB && (
-        <BlogSection client={client} blogTarget={blogTarget} blogCount={blogCount} onBlogChange={setBlogCount} />
+        <BlogSection client={client} blogTarget={blogTarget} blogCount={blogCount} onBlogChange={setBlogCount} onTargetChange={setBlogTarget} />
       )}
 
       {activeSection === 'brand' && (

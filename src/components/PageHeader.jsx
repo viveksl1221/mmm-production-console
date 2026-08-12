@@ -23,7 +23,7 @@ const COPY = {
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export default function PageHeader({ posts, blogs, content }) {
+export default function PageHeader({ posts, blogs, content, blogTargets }) {
   const location = useLocation();
   const { clientSlug } = useParams();
 
@@ -32,7 +32,7 @@ export default function PageHeader({ posts, blogs, content }) {
     const logo = client ? CLIENT_LOGOS[client] : null;
     const items = client && content ? content.getItems(client) : [];
     const postTarget = client ? POST_TARGETS[client] || 0 : 0;
-    const blogTarget = client ? BLOG_TARGETS[client] || 0 : 0;
+    const blogTarget = client ? blogTargets[client] || 0 : 0;
 
     const metaBits = [];
     if (client && POST_TARGETS[client] !== undefined) metaBits.push(`${items.length}/${postTarget} posts planned`);

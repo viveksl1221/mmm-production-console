@@ -18,9 +18,12 @@ create table if not exists post_status (
   primary key (client, post_num)
 );
 
+-- target overrides the campaign.js default blog target for a client when
+-- set; null means "use the campaign.js default".
 create table if not exists blog_counts (
   client text primary key,
   count integer not null default 0,
+  target integer,
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now()
 );
