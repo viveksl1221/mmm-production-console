@@ -5,7 +5,7 @@
 // whatever campaign.js looked like at seed time.
 
 import { POST_TARGETS, BLOG_TARGETS, FIKA_GAP, CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX } from '../data/campaign.js';
-import { TIME_MIN } from './constants.js';
+import { TIME_MIN, STATUSES } from './constants.js';
 
 export function wkBucket(w) {
   return w === 5 ? 4 : w;
@@ -183,6 +183,27 @@ export function remainingBreakdown(itemsByClient, posts, blogs, blogTargets) {
   });
 
   return { ...counts, 'Not Yet Planned': notYetPlanned, 'Blog Creative': blogRemaining };
+}
+
+// Per-client format + status breakdown for the Overview dashboard's
+// expandable client cards — "how many Reels/Carousels/Statics, and how far
+// along is each" for one client, without navigating into its full page.
+export function clientDetailBreakdown(client, items, posts, blogCount, blogTarget) {
+  const formats = {};
+  const statuses = {};
+  STATUSES.forEach((s) => (statuses[s] = 0));
+
+  items.forEach((it) => {
+    const fmt = it.format || 'Other';
+    formats[fmt] ||= { total: 0, done: 0 };
+    formats[fmt].total++;
+
+    const status = posts[postKey(client, it.num)] || 'Planned';
+    statuses[status] = (statuses[status] || 0) + 1;
+    if (status === 'Approved') formats[fmt].done++;
+  });
+
+  return { formats, statuses, blogCount, blogTarget };
 }
 
 export function totalTargets(blogTargets) {

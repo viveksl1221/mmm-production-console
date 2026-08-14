@@ -47,12 +47,6 @@ export const BLOG_TARGETS = { 'My Health': 8, 'Journey Wellness': 8, Sikkini: 8,
 // (bucketed week -> count of open slots).
 export const FIKA_GAP = { 3: 4, 4: 4 };
 
-// Free-text call-outs shown in "Needs attention" on the Overview tab.
-// `text` may contain simple inline HTML (e.g. <b>) — it's rendered as-is.
-export const ATTENTION_NOTES = [
-  { client: 'Fika Time', text: 'Fika Time is short <b>8 posts</b> against its 15-post target' },
-];
-
 // Free-text notes shown inside a client's card on the Clients tab.
 export const CLIENT_NOTES = {
   'Fika Time': '7 of 15 posts scheduled — 8 more need topics to hit target.',
