@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { FIKA_GAP, WEEK_RANGES } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
-import { BATCH_TASK, STATUS_COLOR, TIME_MIN } from '../lib/constants.js';
+import { REVIEW_TASK, STATUS_COLOR, TIME_MIN } from '../lib/constants.js';
 import {
-  computeWeekly, dayFormatPriority, fmtHours, getTodayInfo, postKey, slug, weekBlogTotal,
-  weekClientBreakdown, weekDone, weekMinutes, weekPostTotal, weekTarget, wkBucket,
+  clientDayAssignments, computeWeekly, dayTaskLabel, fmtHours, getTodayInfo, postKey, slug,
+  weekClientBreakdown, weekDone, weekMinutes, weekTarget, wkBucket,
 } from '../lib/derived.js';
 
 const FORMAT_ORDER = ['Carousel', 'Static', 'Reel'];
@@ -75,7 +75,7 @@ function ClientBreakdown({ w, rows, itemsByClient, posts }) {
   );
 }
 
-function PriorityList({ items }) {
+function PriorityList({ items = [] }) {
   if (!items.length) return null;
   return (
     <ol className="priority-list">
@@ -91,7 +91,7 @@ function PriorityList({ items }) {
   );
 }
 
-function ScheduleDay({ dayNum, tag, sub, task, hours, detail, priority, isToday }) {
+function ScheduleDay({ dayNum, tag, task, hours, detail, priority, isToday }) {
   return (
     <div className={`sched-day ${isToday ? 'current-day' : ''}`}>
       <div className="sched-marker">
@@ -101,7 +101,7 @@ function ScheduleDay({ dayNum, tag, sub, task, hours, detail, priority, isToday 
       <div className="sched-body">
         <div className="sched-head">
           <div>
-            <div className="sched-tag">{tag}{sub && <span className="sched-tag-sub">{sub}</span>}</div>
+            <div className="sched-tag">{tag}</div>
             <div className="sched-task">{task}</div>
           </div>
           {hours != null && (
@@ -115,63 +115,54 @@ function ScheduleDay({ dayNum, tag, sub, task, hours, detail, priority, isToday 
   );
 }
 
-function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek, blogPerWeek }) {
+const DAY_TAGS = ['Mon', 'Tue', 'Wed', 'Thu'];
+
+function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek }) {
   const { weekday } = getTodayInfo();
   const todayDayNum = isCurrentWeek ? weekday : null; // 1=Mon...5=Fri (0=Sun, 6=Sat -> no match)
-  const weeklyData = computeWeekly(itemsByClient);
-  const f = weeklyData[w];
-  const scMin = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel;
-  const reelMin = (f.Reel || 0) * TIME_MIN.Reel;
-  const blogMin = weekBlogTotal(w, blogPerWeek) * TIME_MIN.Blog;
+  const dayAssignments = clientDayAssignments(w, itemsByClient);
 
-  const postPriority = dayFormatPriority(w, itemsByClient, ['Static', 'Carousel', 'Reel']);
-  const scPriority = dayFormatPriority(w, itemsByClient, ['Static', 'Carousel']);
-  const reelPriority = dayFormatPriority(w, itemsByClient, ['Reel']);
-  const blogPriority = Object.entries(blogPerWeek[w] || {})
-    .filter(([, count]) => count > 0)
-    .map(([client, count]) => ({ client, count }))
-    .sort((a, b) => b.count - a.count);
+  function dayStats(clients) {
+    const counts = { Static: 0, Carousel: 0, Reel: 0 };
+    let minutes = 0;
+    clients.forEach((client) => {
+      (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w).forEach((it) => {
+        counts[it.format] = (counts[it.format] || 0) + 1;
+        minutes += TIME_MIN[it.format] || 0;
+      });
+    });
+    return { counts, minutes };
+  }
+
   const reviewPriority = clientRows
-    .map((r) => ({ client: r.client, count: r.total + r.blogCount }))
+    .map((r) => ({ client: r.client, count: r.total }))
     .sort((a, b) => b.count - a.count);
 
   return (
     <div className="sched">
-      <ScheduleDay
-        dayNum="01" tag="Mon"
-        task={BATCH_TASK[1].name}
-        detail={`${weekPostTotal(w, weeklyData) - (FIKA_GAP[w] || 0)} posts need copy — start with the biggest batch`}
-        priority={postPriority}
-        isToday={todayDayNum === 1}
-      />
-      <ScheduleDay
-        dayNum="02" tag="Tue" sub="statics + carousels"
-        task={BATCH_TASK[2].name}
-        hours={scMin}
-        detail={`${f.Static || 0} statics, ${f.Carousel || 0} carousels`}
-        priority={scPriority}
-        isToday={todayDayNum === 2}
-      />
-      <ScheduleDay
-        dayNum="03" tag="Wed" sub="reels"
-        task={BATCH_TASK[3].name}
-        hours={reelMin}
-        detail={`${f.Reel || 0} Reels — batch edits and exports`}
-        priority={reelPriority}
-        isToday={todayDayNum === 3}
-      />
-      <ScheduleDay
-        dayNum="04" tag="Thu" sub="blog creatives"
-        task={BATCH_TASK[4].name}
-        hours={blogMin}
-        detail={`${weekBlogTotal(w, blogPerWeek)} blog creatives across ${blogPriority.length} client${blogPriority.length === 1 ? '' : 's'}`}
-        priority={blogPriority}
-        isToday={todayDayNum === 4}
-      />
+      {[1, 2, 3, 4].map((d) => {
+        const clients = dayAssignments[d] || [];
+        const { counts, minutes } = dayStats(clients);
+        const label = dayTaskLabel(d, dayAssignments);
+        const formatDetail = FORMAT_ORDER.filter((f) => counts[f] > 0)
+          .map((f) => `${counts[f]} ${f.toLowerCase()}${counts[f] > 1 ? 's' : ''}`)
+          .join(', ');
+        return (
+          <ScheduleDay
+            key={d}
+            dayNum={`0${d}`}
+            tag={DAY_TAGS[d - 1]}
+            task={label.name}
+            hours={clients.length ? minutes : null}
+            detail={clients.length ? formatDetail : label.detail}
+            isToday={todayDayNum === d}
+          />
+        );
+      })}
       <ScheduleDay
         dayNum="05" tag="Fri"
-        task={BATCH_TASK[5].name}
-        detail={BATCH_TASK[5].detail}
+        task={REVIEW_TASK.name}
+        detail={REVIEW_TASK.detail}
         priority={reviewPriority}
         isToday={todayDayNum === 5}
       />
@@ -207,11 +198,11 @@ function WeekCard({ w, isCurrent, isOpen, onToggle, itemsByClient, posts, weekly
         <div className="section-label wk-section-label">By client</div>
         <ClientBreakdown w={w} rows={clientRows} itemsByClient={itemsByClient} posts={posts} />
 
-        {FIKA_GAP[w] && <div className="note">Includes {FIKA_GAP[w]} Fika Time slots with no topic yet — plan these Monday, before the rest of the week's copy.</div>}
+        {FIKA_GAP[w] && <div className="note">Includes {FIKA_GAP[w]} Fika Time slots with no topic yet — plan these before batching Fika Time's posts.</div>}
         {weekMinutes(w, weeklyData, blogPerWeek) / 60 > 32 && <div className="note">~{fmtHours(weekMinutes(w, weeklyData, blogPerWeek))} of production this week (~{(weekMinutes(w, weeklyData, blogPerWeek) / 60 / 5).toFixed(1)}h/day across a 5-day batch).</div>}
 
         <div className="section-label wk-section-label">Batch schedule</div>
-        <BatchSchedule w={w} itemsByClient={itemsByClient} clientRows={clientRows} isCurrentWeek={isCurrent} blogPerWeek={blogPerWeek} />
+        <BatchSchedule w={w} itemsByClient={itemsByClient} clientRows={clientRows} isCurrentWeek={isCurrent} />
       </div>
     </div>
   );

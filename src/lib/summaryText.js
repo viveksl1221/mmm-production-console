@@ -13,8 +13,6 @@
 // direction/structure) — no invented fields like "objective" that we have
 // no real data for.
 
-import { TIME_MIN } from './constants.js';
-
 // JSON.stringify's escaping (backslashes, quotes, control chars) happens to
 // produce a valid YAML double-quoted scalar, so this is a safe way to quote
 // any string without shipping a YAML serializer for one field.
@@ -61,8 +59,10 @@ function pushTask(lines, { id, client, category, title, priority, durationMin, s
   if (item) pushContentBlock(lines, item);
 }
 
-// dayLabel: e.g. "Tuesday, Aug 5"; weekLabel: e.g. "Week 1".
-export function buildDaySummaryText({ isoDate, dayLabel, weekLabel, isToday, task, postRows, blogRows, carried, extraTasks, progressByKey }) {
+// dayLabel: e.g. "Tuesday, Aug 5"; weekLabel: e.g. "Week 1". Blog creatives
+// are a separate lane (their own tab per client, not day-scheduled) and
+// never appear in this daily checklist summary.
+export function buildDaySummaryText({ isoDate, dayLabel, weekLabel, isToday, task, postRows, carried, extraTasks, progressByKey }) {
   const lines = [];
   lines.push('session:');
   lines.push(`  date: ${isoDate}`);
@@ -72,8 +72,6 @@ export function buildDaySummaryText({ isoDate, dayLabel, weekLabel, isToday, tas
   lines.push(`  task_type: ${yStr(task.name)}`);
   lines.push('');
 
-  const carriedPosts = (carried || []).filter((r) => !r.isBlog);
-  const carriedBlogs = (carried || []).filter((r) => r.isBlog);
   const counters = {};
   const nextId = (category) => {
     counters[category] = (counters[category] || 0) + 1;
@@ -83,7 +81,7 @@ export function buildDaySummaryText({ isoDate, dayLabel, weekLabel, isToday, tas
   lines.push('tasks:');
   let any = false;
 
-  carriedPosts.forEach((r) => {
+  (carried || []).forEach((r) => {
     any = true;
     const category = r.item.format.toUpperCase();
     const status = mapStatus(progressByKey?.[`${r.dueDate}::${r.client}::${r.item.num}`]?.status);
@@ -100,17 +98,6 @@ export function buildDaySummaryText({ isoDate, dayLabel, weekLabel, isToday, tas
     pushTask(lines, {
       id: nextId(category), client: r.client, category, title: r.item.topic || '(untitled)',
       priority: 'P2', durationMin: r.timeMin, status, item: r.item,
-    });
-  });
-
-  [...carriedBlogs.map((r) => ({ ...r, carriedOver: true })), ...blogRows].forEach((r) => {
-    any = true;
-    const status = mapStatus(progressByKey?.[`${r.carriedOver ? r.dueDate : isoDate}::Blog: ${r.client}::0`]?.status);
-    pushTask(lines, {
-      id: nextId('BLOG'), client: r.client, category: 'BLOG',
-      title: `${r.count} Blog Creative${r.count > 1 ? 's' : ''}`,
-      priority: r.carriedOver ? 'P1' : 'P2', durationMin: r.count * TIME_MIN.Blog, status: 'todo',
-      carriedOver: r.carriedOver, originallyDue: r.dueDate,
     });
   });
 

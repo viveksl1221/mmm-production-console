@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
-import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
+import { ALL_CLIENTS, POST_TARGETS } from '../data/campaign.js';
 import { useBrandKits } from '../hooks/useBrandKits.js';
 import { uploadPostAsset } from '../lib/assetUpload.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
@@ -310,7 +310,8 @@ export default function ClientPage() {
 
   const items = client ? content.getItems(client) : [];
   const hasP = client ? POST_TARGETS[client] !== undefined : false;
-  const hasB = client ? BLOG_TARGETS[client] !== undefined : false;
+  const blogTarget = client ? blogTargets[client] || 0 : 0;
+  const hasB = blogTarget > 0;
   const [section, setSection] = useState(null);
 
   if (!client) {
@@ -321,7 +322,6 @@ export default function ClientPage() {
     );
   }
 
-  const blogTarget = blogTargets[client] || 0;
   const blogCount = blogs[client] || 0;
   const removeTarget = pendingRemove != null ? items.find((it) => it.num === pendingRemove) : null;
 

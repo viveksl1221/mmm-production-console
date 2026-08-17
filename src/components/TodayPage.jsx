@@ -4,10 +4,10 @@ import { CAMPAIGN_MONTH_INDEX, CAMPAIGN_YEAR, WEEK_RANGES } from '../data/campai
 import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { useExtraTasks } from '../hooks/useExtraTasks.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
-import { BATCH_TASK, DAILY_STATUS_COLOR, DAILY_STATUS_LABEL } from '../lib/constants.js';
+import { DAILY_STATUS_COLOR, DAILY_STATUS_LABEL } from '../lib/constants.js';
 import {
-  blogProgressKey, campaignMonthBounds, carriedOverRows, fmtClock, fmtHours, getTodayInfo, isoDateForWeekday,
-  postKey, slug, todaysBlogTasks, todaysCounts, todaysItems,
+  campaignMonthBounds, carriedOverRows, clientDayAssignments, dayTaskLabel, fmtClock, fmtHours, getTodayInfo,
+  isoDateForWeekday, postKey, slug, todaysCounts, todaysItems,
 } from '../lib/derived.js';
 import { buildDaySummaryText } from '../lib/summaryText.js';
 import PostDetailModal from './PostDetailModal.jsx';
@@ -111,7 +111,7 @@ function ClientGroup({ client, linkTo, children }) {
 // Week + day navigator — lets you browse and act on any day in the
 // campaign month, not just today. Each day tab shows its own task type and
 // done/total so you can see at a glance what's still open days out.
-function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, itemsByClient, progressByKey, blogPerWeek }) {
+function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, itemsByClient, progressByKey, dayAssignments }) {
   return (
     <div className="cal-strip">
       <div className="cal-week-tabs">
@@ -128,7 +128,7 @@ function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, item
       <div className="cal-day-tabs">
         {[1, 2, 3, 4, 5].map((wd) => {
           const iso = isoDateForWeekday(selWeek, wd);
-          const counts = todaysCounts(itemsByClient, selWeek, wd, iso, progressByKey, blogPerWeek);
+          const counts = todaysCounts(itemsByClient, selWeek, wd, iso, progressByKey, dayAssignments);
           const isToday = today.isoDate === iso;
           return (
             <button
@@ -138,7 +138,7 @@ function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, item
             >
               <div className="cal-day-name">{WEEKDAY_SHORT[wd]}{isToday && <span className="cal-today-dot" />}</div>
               <div className="cal-day-date mono">{fmtShortDate(iso)}</div>
-              <div className="cal-day-task">{BATCH_TASK[wd].name}</div>
+              <div className="cal-day-task">{dayTaskLabel(wd, dayAssignments).name}</div>
               {counts.total > 0 && (
                 <div className={`cal-day-progress mono${counts.done === counts.total ? ' complete' : ''}`}>
                   {counts.done}/{counts.total}
@@ -153,12 +153,13 @@ function CalendarStrip({ selWeek, selDay, onSelectWeek, onSelectDay, today, item
 }
 
 export default function TodayPage() {
-  const { userId, content, posts, blogPerWeek } = useOutletContext();
+  const { userId, content, posts } = useOutletContext();
   const today = getTodayInfo();
   const [selWeek, setSelWeek] = useState(today.weekNum || 1);
   const [selDay, setSelDay] = useState(today.weekday >= 1 && today.weekday <= 5 ? today.weekday : 1);
   const selIsoDate = isoDateForWeekday(selWeek, selDay);
   const isViewingToday = today.isoDate === selIsoDate;
+  const selWeekAssignments = clientDayAssignments(selWeek, content.itemsByClient);
 
   const { start: monthStart, end: monthEnd } = campaignMonthBounds();
   const { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem } = useDailyProgress(monthStart, monthEnd, userId);
@@ -176,35 +177,32 @@ export default function TodayPage() {
   }, []);
 
   // Computed once at the top so both the checklist body and the summary
-  // preview read the same carried-over list.
+  // preview read the same carried-over list. Uses today's own week
+  // assignments (not selWeek's) since carry-over is always about real today,
+  // regardless of which day/week is currently being browsed.
+  const todayAssignments = today.weekNum ? clientDayAssignments(today.weekNum, content.itemsByClient) : null;
   const carried = !loading && today.weekNum
-    ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey, blogPerWeek)
+    ? carriedOverRows(content.itemsByClient, today.weekNum, today.weekday, today.isoDate, progressByKey, todayAssignments)
     : [];
 
   let calendarBody;
   if (loading) {
     calendarBody = <div className="loading-state">Loading…</div>;
   } else {
-    const task = BATCH_TASK[selDay];
-    const isBlogDay = selDay === 4;
-    const postRows = isBlogDay ? [] : todaysItems(content.itemsByClient, selWeek, selDay);
-    const blogRows = isBlogDay ? todaysBlogTasks(selWeek, blogPerWeek) : [];
+    const task = dayTaskLabel(selDay, selWeekAssignments);
+    const postRows = todaysItems(content.itemsByClient, selWeek, selDay, selWeekAssignments);
     const carriedForToday = isViewingToday ? carried : [];
-    const carriedPosts = carriedForToday.filter((r) => !r.isBlog);
-    const carriedBlogs = carriedForToday.filter((r) => r.isBlog);
 
     const { total: totalCount, done: completedCount, inProgress: inProgressCount, pending: pendingCount } =
-      todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey, blogPerWeek);
-    const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0) + blogRows.reduce((a, r) => a + r.timeMin, 0);
-    const loggedSeconds =
-      postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${r.client}::${r.item.num}`]), 0) +
-      blogRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${blogProgressKey(r.client)}::0`]), 0);
+      todaysCounts(content.itemsByClient, selWeek, selDay, selIsoDate, progressByKey, selWeekAssignments);
+    const totalMinutes = postRows.reduce((a, r) => a + r.timeMin, 0);
+    const loggedSeconds = postRows.reduce((a, r) => a + liveElapsedSeconds(progressByKey[`${selIsoDate}::${r.client}::${r.item.num}`]), 0);
     const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
 
     const grouped = {};
     postRows.forEach((r) => (grouped[r.client] ||= []).push(r));
     const carriedGrouped = {};
-    carriedPosts.forEach((r) => (carriedGrouped[r.client] ||= []).push(r));
+    carriedForToday.forEach((r) => (carriedGrouped[r.client] ||= []).push(r));
 
     function openSummaryPreview() {
       setSummaryText(buildDaySummaryText({
@@ -214,7 +212,6 @@ export default function TodayPage() {
         isToday: isViewingToday,
         task,
         postRows,
-        blogRows,
         carried: carriedForToday,
         extraTasks: extra.tasks,
         progressByKey,
@@ -291,29 +288,6 @@ export default function TodayPage() {
                 })}
               </ClientGroup>
             ))}
-            {carriedBlogs.length > 0 && (
-              <ClientGroup client="Blog Creatives" key="carried-blogs">
-                {carriedBlogs.map((r) => {
-                  const bKey = blogProgressKey(r.client);
-                  const key = `${r.dueDate}::${bKey}::0`;
-                  return (
-                    <ChecklistRow
-                      key={`${r.client}-${r.dueDate}`}
-                      client={r.client}
-                      title={r.client}
-                      subtitle={`${r.count} blog creative${r.count > 1 ? 's' : ''}`}
-                      timeMin={r.timeMin}
-                      dueTag={WEEKDAY_SHORT[r.dueWeekday]}
-                      entry={progressByKey[key]}
-                      onStart={() => startTimer(bKey, 0, r.dueDate)}
-                      onPause={() => pauseTimer(bKey, 0, r.dueDate)}
-                      onComplete={() => completeItem(bKey, 0, r.dueDate)}
-                      onReset={() => resetItem(bKey, 0, r.dueDate)}
-                    />
-                  );
-                })}
-              </ClientGroup>
-            )}
           </div>
         )}
 
@@ -342,29 +316,6 @@ export default function TodayPage() {
             })}
           </ClientGroup>
         ))}
-
-        {blogRows.length > 0 && (
-          <ClientGroup client="Blog Creatives" key="__blogs">
-            {blogRows.map(({ client, count, timeMin }) => {
-              const bKey = blogProgressKey(client);
-              const key = `${selIsoDate}::${bKey}::0`;
-              return (
-                <ChecklistRow
-                  key={client}
-                  client={client}
-                  title={client}
-                  subtitle={`${count} blog creative${count > 1 ? 's' : ''} due this week`}
-                  timeMin={timeMin}
-                  entry={progressByKey[key]}
-                  onStart={() => startTimer(bKey, 0, selIsoDate)}
-                  onPause={() => pauseTimer(bKey, 0, selIsoDate)}
-                  onComplete={() => completeItem(bKey, 0, selIsoDate)}
-                  onReset={() => resetItem(bKey, 0, selIsoDate)}
-                />
-              );
-            })}
-          </ClientGroup>
-        )}
       </>
     );
   }
@@ -390,7 +341,7 @@ export default function TodayPage() {
         today={today}
         itemsByClient={content.itemsByClient}
         progressByKey={progressByKey}
-        blogPerWeek={blogPerWeek}
+        dayAssignments={selWeekAssignments}
       />
 
       {calendarBody}

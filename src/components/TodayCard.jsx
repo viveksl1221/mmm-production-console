@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { WEEK_RANGES } from '../data/campaign.js';
 import { useDailyProgress } from '../hooks/useDailyProgress.js';
-import { BATCH_TASK } from '../lib/constants.js';
-import { getTodayInfo, todaysCounts } from '../lib/derived.js';
+import { clientDayAssignments, dayTaskLabel, getTodayInfo, todaysCounts } from '../lib/derived.js';
 
 // Ring showing today's done vs. remaining split — strictly two-tone
 // (black = done, red = still to do) rather than a third neutral shade,
@@ -49,7 +48,7 @@ function TodayDonut({ done, remaining, total }) {
   );
 }
 
-export default function TodayCard({ itemsByClient, userId, blogPerWeek }) {
+export default function TodayCard({ itemsByClient, userId }) {
   const navigate = useNavigate();
   const { weekday, weekNum, isoDate } = getTodayInfo();
   const { progressByKey, loading } = useDailyProgress(isoDate, isoDate, userId);
@@ -68,13 +67,14 @@ export default function TodayCard({ itemsByClient, userId, blogPerWeek }) {
       <div className="today-card">
         <div className="today-eyebrow">{WEEK_RANGES[weekNum].label} · Off day</div>
         <div className="today-title">No batch task today</div>
-        <div className="today-detail">Next up: Monday — hooks &amp; captions for {WEEK_RANGES[weekNum].label}</div>
+        <div className="today-detail">Next up: Monday's client batch for {WEEK_RANGES[weekNum].label}</div>
       </div>
     );
   }
 
-  const task = BATCH_TASK[weekday];
-  const counts = !loading ? todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) : null;
+  const dayAssignments = clientDayAssignments(weekNum, itemsByClient);
+  const task = dayTaskLabel(weekday, dayAssignments);
+  const counts = !loading ? todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, dayAssignments) : null;
   const hasCounts = counts && counts.total > 0;
 
   return (

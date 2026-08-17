@@ -41,7 +41,12 @@ export const ALL_CLIENTS = [
 ];
 
 export const POST_TARGETS = { 'My Health': 20, Sikkini: 30, 'Man Made Marketing': 15, 'Fika Time': 15, 'Fika Time Sushi': 10 };
-export const BLOG_TARGETS = { 'My Health': 8, 'Journey Wellness': 8, Sikkini: 8, 'Man Made Marketing': 7, 'Eshopify Fulfillment': 8 };
+
+// Standard default is 10 for every client that does blog creatives —
+// individual clients can still be raised (or dropped to 0, which hides
+// blog creatives for them everywhere — see hasB checks) via the live
+// override in blog_counts.target (see effectiveBlogTargets in derived.js).
+export const BLOG_TARGETS = { 'My Health': 10, 'Journey Wellness': 10, Sikkini: 10, 'Man Made Marketing': 10, 'Eshopify Fulfillment': 10 };
 
 // Weeks where a client has planned slots with no topic locked yet
 // (bucketed week -> count of open slots).

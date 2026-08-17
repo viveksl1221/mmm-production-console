@@ -5,7 +5,7 @@
 // whatever campaign.js looked like at seed time.
 
 import { POST_TARGETS, BLOG_TARGETS, FIKA_GAP, CAMPAIGN_YEAR, CAMPAIGN_MONTH_INDEX } from '../data/campaign.js';
-import { TIME_MIN, STATUSES } from './constants.js';
+import { TIME_MIN, STATUSES, REVIEW_TASK } from './constants.js';
 
 export function wkBucket(w) {
   return w === 5 ? 4 : w;
@@ -77,21 +77,46 @@ export function weekClientBreakdown(w, itemsByClient, posts, blogPerWeek) {
   return rows.sort((a, b) => b.total - a.total);
 }
 
-// Ranks clients by volume of work matching `formats` within week w — biggest
-// batch first, so the batch-schedule view can say who to tackle first on a
-// given day (e.g. Tuesday = Static + Carousel).
-export function dayFormatPriority(w, itemsByClient, formats) {
-  const counts = {};
+// One-client-per-day batching: ranks each week's active clients by total
+// estimated production minutes (Static/Carousel/Reel only — blog creatives
+// are a fully separate lane, not part of this rotation) and hands the three
+// biggest their own solo day (Mon/Tue/Wed), so a whole day stays one fixed
+// mindset instead of context-switching between clients. Everyone else
+// (4th-biggest and smaller) shares Thursday. Stable for the whole week —
+// computed from what's scheduled, not from progress, so "Monday = Client X"
+// doesn't shift as work gets completed mid-week. Friday isn't assigned here;
+// it's the fixed Review & Send sweep across every client (see REVIEW_TASK).
+export function clientDayAssignments(w, itemsByClient) {
+  const workload = [];
   Object.keys(itemsByClient).forEach((client) => {
-    (itemsByClient[client] || []).forEach((it) => {
-      if (wkBucket(it.week) !== w) return;
-      if (!formats.includes(it.format)) return;
-      counts[client] = (counts[client] || 0) + 1;
-    });
+    const items = (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w);
+    if (!items.length) return;
+    const minutes = items.reduce((sum, it) => sum + (TIME_MIN[it.format] || 0), 0);
+    workload.push({ client, minutes });
   });
-  return Object.entries(counts)
-    .map(([client, count]) => ({ client, count }))
-    .sort((a, b) => b.count - a.count);
+  workload.sort((a, b) => b.minutes - a.minutes);
+
+  const assignments = { 1: [], 2: [], 3: [], 4: [] };
+  workload.forEach(({ client }, i) => {
+    const day = i < 3 ? i + 1 : 4;
+    assignments[day].push(client);
+  });
+  return assignments;
+}
+
+// Display name/detail for a given weekday, given that week's client-day
+// assignments — used by the Today's Batch header, the calendar strip's day
+// tabs, and the Weekly Plan schedule so all three stay in sync.
+export function dayTaskLabel(weekday, dayAssignments) {
+  if (weekday === 5) return REVIEW_TASK;
+  const clients = dayAssignments?.[weekday] || [];
+  if (!clients.length) return { name: 'Open day', detail: 'No client work scheduled for this day.' };
+  return {
+    name: clients.join(' + '),
+    detail: clients.length > 1
+      ? `Batch the remaining work for ${clients.join(' and ')} — smaller clients sharing the day.`
+      : `Batch all of ${clients[0]}'s remaining Static/Carousel/Reel work in one sitting.`,
+  };
 }
 
 // Merges live per-client target overrides (from blog_counts.target — see
@@ -242,54 +267,35 @@ export function getTodayInfo() {
 }
 
 // The individual items due for today's batch task, grouped by client.
-// Monday (all formats) and Friday (review) both cover the week's full set;
-// Tuesday/Wednesday are format-filtered. Thursday has no item list — blog
-// creatives aren't individually tracked — see todaysBlogTasks instead.
-export function todaysItems(itemsByClient, weekNum, weekday) {
-  if (!weekNum || weekday === 0 || weekday === 6 || weekday === 4) return [];
-  const formats = weekday === 2 ? ['Static', 'Carousel'] : weekday === 3 ? ['Reel'] : null; // null = all formats (Mon/Fri)
+// Mon–Thu are client-scoped (see clientDayAssignments — whichever client(s)
+// have that day, every format of theirs); Friday is the full-week Review &
+// Send sweep across every client. dayAssignments is optional — pass it in
+// when the caller already computed it for the week (e.g. to render several
+// days off one assignment), otherwise it's derived here.
+export function todaysItems(itemsByClient, weekNum, weekday, dayAssignments) {
+  if (!weekNum || weekday === 0 || weekday === 6) return [];
+  const assignments = weekday >= 1 && weekday <= 4 ? (dayAssignments || clientDayAssignments(weekNum, itemsByClient)) : null;
+  const clientFilter = assignments ? new Set(assignments[weekday] || []) : null; // null = every client (Friday)
   const rows = [];
   Object.keys(itemsByClient).forEach((client) => {
+    if (clientFilter && !clientFilter.has(client)) return;
     (itemsByClient[client] || []).forEach((it) => {
       if (wkBucket(it.week) !== weekNum) return;
-      if (formats && !formats.includes(it.format)) return;
       rows.push({ client, item: it, timeMin: TIME_MIN[it.format] || 0 });
     });
   });
   return rows.sort((a, b) => a.client.localeCompare(b.client) || a.item.num - b.item.num);
 }
 
-// Thursday only: per-client blog creative counts due this week (no
-// individual item records exist for blogs, so this is count-based).
-export function todaysBlogTasks(weekNum, blogPerWeek) {
-  if (!weekNum || !blogPerWeek?.[weekNum]) return [];
-  return Object.entries(blogPerWeek[weekNum])
-    .filter(([, count]) => count > 0)
-    .map(([client, count]) => ({ client, count, timeMin: count * TIME_MIN.Blog }))
-    .sort((a, b) => b.count - a.count);
-}
-
-// Blog rows have no individual post record to key off of, so they get a
-// synthetic client string ("Blog: My Health") with num=0 in daily_progress —
-// keeps `num` a valid integer for the DB while staying unique per client.
-export function blogProgressKey(client) {
-  return `Blog: ${client}`;
-}
-
 // Done/in-progress/pending/total counts for today's checklist, shared by
 // the full /today page and the compact Overview card so both read the same
 // numbers off the same daily_progress state. progressByKey is keyed
 // "workDate::client::num" (see useDailyProgress), so isoDate is required to
-// look today's rows up correctly.
-export function todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) {
-  const isBlogDay = weekday === 4;
-  const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, weekday);
-  const blogRows = isBlogDay ? todaysBlogTasks(weekNum, blogPerWeek) : [];
-
-  const statuses = [
-    ...postRows.map((r) => progressByKey[`${isoDate}::${r.client}::${r.item.num}`]?.status || 'not_started'),
-    ...blogRows.map((r) => progressByKey[`${isoDate}::${blogProgressKey(r.client)}::0`]?.status || 'not_started'),
-  ];
+// look today's rows up correctly. Blog creatives are a separate lane (their
+// own tab per client) and never appear in this daily checklist.
+export function todaysCounts(itemsByClient, weekNum, weekday, isoDate, progressByKey, dayAssignments) {
+  const postRows = todaysItems(itemsByClient, weekNum, weekday, dayAssignments);
+  const statuses = postRows.map((r) => progressByKey[`${isoDate}::${r.client}::${r.item.num}`]?.status || 'not_started');
   return {
     total: statuses.length,
     done: statuses.filter((s) => s === 'completed').length,
@@ -344,42 +350,28 @@ function weekdaysBeforeToday(isoDate, weekday) {
 
 // Items scheduled on an earlier day this week whose progress on THAT
 // specific day never reached completed — the safety net for "I didn't
-// finish Tuesday's Carousel batch." Only Tuesday/Wednesday/Thursday count
-// as a real "due day" per format — Monday is a copy pass and Friday a
-// review pass over the *whole* week's items regardless of format, so
-// treating either as a per-item deadline would flag e.g. a Reel as overdue
-// on Tuesday when its actual production day (Wednesday) hasn't happened
-// yet. Dedupes against whatever's already in today's own list so nothing
-// doubles up on Friday, which naturally re-sweeps everything anyway.
-export function carriedOverRows(itemsByClient, weekNum, weekday, isoDate, progressByKey, blogPerWeek) {
+// finish Monday's client." Every Mon–Thu is now a real per-client
+// production day (see clientDayAssignments), so all of them count as a due
+// day, unlike the old format-batch model where Monday was just a copy pass.
+// Dedupes against whatever's already in today's own list so nothing doubles
+// up on Friday, which naturally re-sweeps everything anyway. Blog creatives
+// aren't day-scheduled at all, so they're never carried over here.
+export function carriedOverRows(itemsByClient, weekNum, weekday, isoDate, progressByKey, dayAssignments) {
   if (!weekNum || weekday === 0 || weekday === 6) return [];
+  const assignments = dayAssignments || clientDayAssignments(weekNum, itemsByClient);
 
   const todayKeys = new Set();
-  const isBlogDayToday = weekday === 4;
-  (isBlogDayToday ? [] : todaysItems(itemsByClient, weekNum, weekday)).forEach((r) => todayKeys.add(`${r.client}::${r.item.num}`));
-  (isBlogDayToday ? todaysBlogTasks(weekNum, blogPerWeek) : []).forEach((r) => todayKeys.add(`${blogProgressKey(r.client)}::0`));
+  todaysItems(itemsByClient, weekNum, weekday, assignments).forEach((r) => todayKeys.add(`${r.client}::${r.item.num}`));
 
   const rows = [];
   weekdaysBeforeToday(isoDate, weekday).forEach(({ weekday: wd, isoDate: dueDate }) => {
-    if (wd === 1) return; // Monday's copy pass isn't a per-format production deadline
-    const isBlogDay = wd === 4;
-    const postRows = isBlogDay ? [] : todaysItems(itemsByClient, weekNum, wd);
-    const blogRows = isBlogDay ? todaysBlogTasks(weekNum, blogPerWeek) : [];
-
+    const postRows = todaysItems(itemsByClient, weekNum, wd, assignments);
     postRows.forEach((r) => {
       const itemKey = `${r.client}::${r.item.num}`;
       if (todayKeys.has(itemKey)) return;
       const status = progressByKey[`${dueDate}::${itemKey}`]?.status || 'not_started';
       if (status === 'completed') return;
       rows.push({ client: r.client, item: r.item, timeMin: r.timeMin, dueWeekday: wd, dueDate });
-    });
-
-    blogRows.forEach((r) => {
-      const itemKey = `${blogProgressKey(r.client)}::0`;
-      if (todayKeys.has(itemKey)) return;
-      const status = progressByKey[`${dueDate}::${itemKey}`]?.status || 'not_started';
-      if (status === 'completed') return;
-      rows.push({ client: r.client, count: r.count, timeMin: r.timeMin, isBlog: true, dueWeekday: wd, dueDate });
     });
   });
   return rows;

@@ -4,13 +4,11 @@
 
 export const TIME_MIN = { Static: 25, Carousel: 50, Reel: 75, Blog: 105, Gap: 45 };
 
-export const BATCH_TASK = {
-  1: { name: 'Hooks & Captions', detail: "Write copy for the week's full batch, grouped by pillar" },
-  2: { name: 'Statics + Carousels', detail: 'Build all static and carousel visuals in one tool session' },
-  3: { name: 'Reels', detail: 'Batch the Reel edits and exports' },
-  4: { name: 'Blog Creatives', detail: 'Protected day — the longest single-asset lift' },
-  5: { name: 'Review & Send', detail: 'Final review, revisions, send for approval, QA' },
-};
+// Monday–Thursday are dynamic per week — one client's full day (see
+// clientDayAssignments in derived.js), not a fixed format-based task, so
+// there's nothing to hardcode for them. Friday is the one fixed day left:
+// a full-week review sweep across every client, not production work.
+export const REVIEW_TASK = { name: 'Review & Send', detail: 'Final review, revisions, send for approval, QA' };
 
 // The pipeline stops at Approved — there's no "sent to client"/"scheduled"/
 // "published" stage on this side; whatever happens after approval isn't

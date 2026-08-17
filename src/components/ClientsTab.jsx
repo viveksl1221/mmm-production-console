@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
+import { ALL_CLIENTS, POST_TARGETS } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
@@ -26,7 +26,6 @@ export default function ClientsTab() {
       {ALL_CLIENTS.map((client) => {
         const items = content.getItems(client);
         const hasP = POST_TARGETS[client] !== undefined;
-        const hasB = BLOG_TARGETS[client] !== undefined;
 
         let doneCount = 0;
         items.forEach((it) => {
@@ -35,6 +34,7 @@ export default function ClientsTab() {
 
         const postTarget = POST_TARGETS[client] || 0;
         const blogTarget = blogTargets[client] || 0;
+        const hasB = blogTarget > 0;
         const blogCount = blogs[client] || 0;
         const totalDone = doneCount + blogCount;
         const totalTarget = postTarget + blogTarget;

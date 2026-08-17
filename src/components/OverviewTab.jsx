@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS, WEEK_RANGES } from '../data/campaign.js';
+import { ALL_CLIENTS, POST_TARGETS, WEEK_RANGES } from '../data/campaign.js';
 import { computeWeekly, getTodayInfo, weekClientBreakdown } from '../lib/derived.js';
 import ClientOverviewCard from './ClientOverviewCard.jsx';
 import StatGrid from './StatGrid.jsx';
@@ -15,7 +15,7 @@ export default function OverviewTab() {
 
   return (
     <>
-      <TodayCard itemsByClient={content.itemsByClient} userId={userId} blogPerWeek={blogPerWeek} />
+      <TodayCard itemsByClient={content.itemsByClient} userId={userId} />
       <StatGrid posts={posts} blogs={blogs} itemsByClient={content.itemsByClient} weeklyData={weeklyData} blogTargets={blogTargets} blogPerWeek={blogPerWeek} />
       <div className="section-label">Clients</div>
       {ALL_CLIENTS.map((client) => (
@@ -25,7 +25,7 @@ export default function OverviewTab() {
           items={content.getItems(client)}
           posts={posts}
           hasP={POST_TARGETS[client] !== undefined}
-          hasB={BLOG_TARGETS[client] !== undefined}
+          hasB={(blogTargets[client] || 0) > 0}
           postTarget={POST_TARGETS[client] || 0}
           blogTarget={blogTargets[client] || 0}
           blogCount={blogs[client] || 0}

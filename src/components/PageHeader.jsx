@@ -1,5 +1,5 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ALL_CLIENTS, BLOG_TARGETS, CAMPAIGN_MONTH_INDEX, CAMPAIGN_YEAR, POST_TARGETS } from '../data/campaign.js';
+import { ALL_CLIENTS, CAMPAIGN_MONTH_INDEX, CAMPAIGN_YEAR, POST_TARGETS } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { slug } from '../lib/derived.js';
 
@@ -36,7 +36,7 @@ export default function PageHeader({ posts, blogs, content, blogTargets }) {
 
     const metaBits = [];
     if (client && POST_TARGETS[client] !== undefined) metaBits.push(`${items.length}/${postTarget} posts planned`);
-    if (client && BLOG_TARGETS[client] !== undefined) metaBits.push(`${blogTarget} blog creatives`);
+    if (client && blogTarget > 0) metaBits.push(`${blogTarget} blog creatives`);
 
     return (
       <header className="main-header">
