@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
-import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS } from '../data/campaign.js';
-import { computeWeekly } from '../lib/derived.js';
+import { ALL_CLIENTS, BLOG_TARGETS, POST_TARGETS, WEEK_RANGES } from '../data/campaign.js';
+import { computeWeekly, getTodayInfo, weekClientBreakdown } from '../lib/derived.js';
 import ClientOverviewCard from './ClientOverviewCard.jsx';
 import StatGrid from './StatGrid.jsx';
 import TodayCard from './TodayCard.jsx';
@@ -8,6 +8,11 @@ import TodayCard from './TodayCard.jsx';
 export default function OverviewTab() {
   const { posts, blogs, content, userId, blogTargets, blogPerWeek } = useOutletContext();
   const weeklyData = computeWeekly(content.itemsByClient);
+  const { weekNum } = getTodayInfo();
+  const wk = weekNum || 1;
+  const weekRows = weekClientBreakdown(wk, content.itemsByClient, posts, blogPerWeek);
+  const weekByClient = Object.fromEntries(weekRows.map((r) => [r.client, r]));
+
   return (
     <>
       <TodayCard itemsByClient={content.itemsByClient} userId={userId} blogPerWeek={blogPerWeek} />
@@ -24,6 +29,8 @@ export default function OverviewTab() {
           postTarget={POST_TARGETS[client] || 0}
           blogTarget={blogTargets[client] || 0}
           blogCount={blogs[client] || 0}
+          weekLabel={WEEK_RANGES[wk].label}
+          weekData={weekByClient[client]}
         />
       ))}
     </>

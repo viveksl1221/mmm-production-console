@@ -4,7 +4,7 @@ import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { clientDetailBreakdown, postKey, slug } from '../lib/derived.js';
 import { STATUS_COLOR } from '../lib/constants.js';
 
-export default function ClientOverviewCard({ client, items, posts, hasP, hasB, postTarget, blogTarget, blogCount }) {
+export default function ClientOverviewCard({ client, items, posts, hasP, hasB, postTarget, blogTarget, blogCount, weekLabel, weekData }) {
   const [open, setOpen] = useState(false);
 
   let doneCount = 0;
@@ -43,6 +43,21 @@ export default function ClientOverviewCard({ client, items, posts, hasP, hasB, p
 
       {open && detail && (
         <div className="client-detail">
+          {weekData && (
+            <div className="client-detail-week">
+              <div className="client-detail-week-label">{weekLabel} — due</div>
+              <div className="client-detail-week-pills">
+                {Object.entries(weekData.counts).filter(([, n]) => n > 0).map(([fmt, n]) => (
+                  <span className="format-pill" key={fmt}>{n} {fmt}{n > 1 ? 's' : ''}</span>
+                ))}
+                {weekData.blogCount > 0 && (
+                  <span className="format-pill">{weekData.blogCount} Blog Creative{weekData.blogCount > 1 ? 's' : ''}</span>
+                )}
+              </div>
+              <div className="client-detail-week-progress">{weekData.done}/{weekData.total} posts done this week</div>
+            </div>
+          )}
+
           <div className="client-detail-row">
             {Object.entries(detail.formats).map(([fmt, { total, done }]) => (
               <div className="client-detail-stat" key={fmt}>

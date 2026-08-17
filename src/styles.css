@@ -474,6 +474,10 @@ a.today-group-name:hover { color: var(--red); }
 .chev-open { transform: rotate(90deg); }
 
 .client-detail { padding: 4px 18px 18px; border-top: 1px solid var(--rule); }
+.client-detail-week { padding-top: 14px; }
+.client-detail-week-label { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin-bottom: 8px; }
+.client-detail-week-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.client-detail-week-progress { font-size: 11.5px; color: var(--ink-dim); margin-top: 8px; }
 .client-detail-row { display: flex; flex-wrap: wrap; gap: 20px; padding-top: 14px; }
 .client-detail-stat { min-width: 96px; }
 .client-detail-stat .n { font-size: 20px; font-weight: 700; }
