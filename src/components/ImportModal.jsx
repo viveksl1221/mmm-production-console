@@ -7,21 +7,25 @@ import {
 
 const SKIP_VALUE = '__skip__';
 
-function SheetMapping({ sheet, onChangeClient, onChangeColumn }) {
+function SheetMapping({ sheet, lockedClient, onChangeClient, onChangeColumn }) {
   return (
     <div className="import-sheet-card">
       <div className="import-sheet-head">
         <div className="import-sheet-name">{sheet.sheetName}</div>
-        <select
-          className="edit-select import-client-select"
-          value={sheet.client || SKIP_VALUE}
-          onChange={(e) => onChangeClient(e.target.value === SKIP_VALUE ? null : e.target.value)}
-        >
-          <option value={SKIP_VALUE}>Skip this sheet</option>
-          {ALL_CLIENTS.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        {lockedClient ? (
+          <div className="import-client-locked">Importing into <b>{lockedClient}</b></div>
+        ) : (
+          <select
+            className="edit-select import-client-select"
+            value={sheet.client || SKIP_VALUE}
+            onChange={(e) => onChangeClient(e.target.value === SKIP_VALUE ? null : e.target.value)}
+          >
+            <option value={SKIP_VALUE}>Skip this sheet</option>
+            {ALL_CLIENTS.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {sheet.client && (
@@ -75,7 +79,7 @@ function DiffSummary({ client, diff }) {
   );
 }
 
-export default function ImportModal({ content, setPostStatus, onClose }) {
+export default function ImportModal({ content, setPostStatus, lockedClient, onClose }) {
   const [step, setStep] = useState('upload');
   const [error, setError] = useState('');
   const [sheets, setSheets] = useState([]);
@@ -87,7 +91,7 @@ export default function ImportModal({ content, setPostStatus, onClose }) {
     try {
       const parsed = await parseWorkbookFile(file);
       const withMapping = parsed.map((sheet) => {
-        const client = guessClientForSheet(sheet.sheetName, ALL_CLIENTS);
+        const client = lockedClient || guessClientForSheet(sheet.sheetName, ALL_CLIENTS);
         const columnMapping = sheet.headerRow.map((h) => guessFieldForHeader(h));
         return { ...sheet, client, columnMapping };
       });
@@ -145,15 +149,16 @@ export default function ImportModal({ content, setPostStatus, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <div className="modal-title">Import content calendar</div>
+          <div className="modal-title">{lockedClient ? `Import calendar — ${lockedClient}` : 'Import content calendar'}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         {step === 'upload' && (
           <div className="modal-body">
             <p className="import-help">
-              Upload an .xlsx or .csv export of your content calendar. Each sheet tab is matched to a client by
-              name — you'll confirm the mapping and column meanings next, before anything is applied.
+              {lockedClient
+                ? `Upload an .xlsx or .csv export of ${lockedClient}'s content calendar. You'll confirm what each column means next, before anything is applied.`
+                : "Upload an .xlsx or .csv export of your content calendar. Each sheet tab is matched to a client by name — you'll confirm the mapping and column meanings next, before anything is applied."}
             </p>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} />
             {error && <div className="import-error">{error}</div>}
@@ -162,11 +167,14 @@ export default function ImportModal({ content, setPostStatus, onClose }) {
 
         {step === 'map' && (
           <div className="modal-body">
-            <p className="import-help">Confirm which client each sheet belongs to, and what each column means.</p>
+            <p className="import-help">
+              {lockedClient ? 'Confirm what each column means.' : 'Confirm which client each sheet belongs to, and what each column means.'}
+            </p>
             {sheets.map((sheet) => (
               <SheetMapping
                 key={sheet.sheetName}
                 sheet={sheet}
+                lockedClient={lockedClient}
                 onChangeClient={(client) => updateSheetClient(sheet.sheetName, client)}
                 onChangeColumn={(colIdx, field) => updateSheetColumn(sheet.sheetName, colIdx, field)}
               />

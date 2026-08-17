@@ -9,6 +9,7 @@ import { postKey, slug } from '../lib/derived.js';
 import BrandKitSection from './BrandKitSection.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import GridPreview from './GridPreview.jsx';
+import ImportModal from './ImportModal.jsx';
 
 const FORMATS = ['Static', 'Carousel', 'Reel'];
 const WEEKS = [1, 2, 3, 4, 5];
@@ -304,6 +305,7 @@ export default function ClientPage() {
   const client = ALL_CLIENTS.find((c) => slug(c) === clientSlug);
   const [openNum, setOpenNum] = useState(null);
   const [pendingRemove, setPendingRemove] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
   const { getKit, saveKit } = useBrandKits(userId);
 
   const items = client ? content.getItems(client) : [];
@@ -387,8 +389,13 @@ export default function ClientPage() {
             >
               Export CSV
             </button>
+            <button className="add-post-btn" onClick={() => setImportOpen(true)}>Import calendar</button>
           </div>
         </>
+      )}
+
+      {importOpen && (
+        <ImportModal content={content} setPostStatus={setPostStatus} lockedClient={client} onClose={() => setImportOpen(false)} />
       )}
 
       {pendingRemove != null && (

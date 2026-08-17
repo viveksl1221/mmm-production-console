@@ -839,6 +839,7 @@ button.chat-send-btn { align-self: flex-end; flex-shrink: 0; }
 .import-sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--shell-bg); gap: 10px; }
 .import-sheet-name { font-size: 13px; font-weight: 600; }
 .import-client-select { width: auto; min-width: 180px; border-color: var(--rule) !important; background: #fff !important; }
+.import-client-locked { font-size: 12.5px; color: var(--ink-dim); white-space: nowrap; }
 .import-columns { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
 .import-column-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
 .import-column-header { font-size: 12px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
