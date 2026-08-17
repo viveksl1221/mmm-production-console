@@ -36,6 +36,14 @@ export function fmtClock(sec) {
   return h > 0 ? `${h}:${mm}:${ssPad}` : `${m}:${ssPad}`;
 }
 
+// A Reel's total production time includes its separate cover creative — the
+// cover takes real design time on top of the edit itself, so it's folded in
+// here rather than left implicit, everywhere an item's time is estimated.
+export function itemTimeMin(format) {
+  const base = TIME_MIN[format] || 0;
+  return format === 'Reel' ? base + TIME_MIN.ReelCover : base;
+}
+
 // Weekly format/client breakdown, computed fresh from live content.
 // Shape: { [week]: { Static, Carousel, Reel, clients: { [client]: { Static, Carousel, Reel, total } } } }
 export function computeWeekly(itemsByClient) {
@@ -72,6 +80,9 @@ export function weekClientBreakdown(w, itemsByClient, posts, blogPerWeek) {
       counts[it.format] = (counts[it.format] || 0) + 1;
       if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') done++;
     });
+    // Every Reel implies its own separate cover creative — mirrored 1:1,
+    // not independently statused (see itemTimeMin).
+    if (counts.Reel) counts['Reel Cover'] = counts.Reel;
     rows.push({ client, counts, total: items.length, done, blogCount: blogPerWeek?.[w]?.[client] || 0 });
   });
   return rows.sort((a, b) => b.total - a.total);
@@ -91,7 +102,7 @@ export function clientDayAssignments(w, itemsByClient) {
   Object.keys(itemsByClient).forEach((client) => {
     const items = (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w);
     if (!items.length) return;
-    const minutes = items.reduce((sum, it) => sum + (TIME_MIN[it.format] || 0), 0);
+    const minutes = items.reduce((sum, it) => sum + itemTimeMin(it.format), 0);
     workload.push({ client, minutes });
   });
   workload.sort((a, b) => b.minutes - a.minutes);
@@ -162,7 +173,7 @@ export function weekTarget(w, weeklyData, blogPerWeek) {
 }
 export function weekMinutes(w, weeklyData, blogPerWeek) {
   const f = weeklyData[w];
-  let m = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel + (f.Reel || 0) * TIME_MIN.Reel;
+  let m = (f.Static || 0) * TIME_MIN.Static + (f.Carousel || 0) * TIME_MIN.Carousel + (f.Reel || 0) * itemTimeMin('Reel');
   m += weekBlogTotal(w, blogPerWeek) * TIME_MIN.Blog;
   m += (FIKA_GAP[w] || 0) * TIME_MIN.Gap;
   return m;
@@ -207,6 +218,10 @@ export function remainingBreakdown(itemsByClient, posts, blogs, blogTargets) {
     blogRemaining += Math.max(0, blogTargets[client] - (blogs[client] || 0));
   });
 
+  // Every not-yet-Approved Reel implies its cover creative isn't done
+  // either — mirrored 1:1, not independently statused.
+  if (counts.Reel) counts['Reel Cover'] = counts.Reel;
+
   return { ...counts, 'Not Yet Planned': notYetPlanned, 'Blog Creative': blogRemaining };
 }
 
@@ -227,6 +242,10 @@ export function clientDetailBreakdown(client, items, posts, blogCount, blogTarge
     statuses[status] = (statuses[status] || 0) + 1;
     if (status === 'Approved') formats[fmt].done++;
   });
+
+  // Every Reel implies its own separate cover creative — mirrored 1:1, not
+  // independently statused (see itemTimeMin).
+  if (formats.Reel) formats['Reel Cover'] = { ...formats.Reel };
 
   return { formats, statuses, blogCount, blogTarget };
 }
@@ -281,7 +300,7 @@ export function todaysItems(itemsByClient, weekNum, weekday, dayAssignments) {
     if (clientFilter && !clientFilter.has(client)) return;
     (itemsByClient[client] || []).forEach((it) => {
       if (wkBucket(it.week) !== weekNum) return;
-      rows.push({ client, item: it, timeMin: TIME_MIN[it.format] || 0 });
+      rows.push({ client, item: it, timeMin: itemTimeMin(it.format) });
     });
   });
   return rows.sort((a, b) => a.client.localeCompare(b.client) || a.item.num - b.item.num);

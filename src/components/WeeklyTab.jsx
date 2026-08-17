@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { FIKA_GAP, WEEK_RANGES } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
-import { REVIEW_TASK, STATUS_COLOR, TIME_MIN } from '../lib/constants.js';
+import { REVIEW_TASK, STATUS_COLOR } from '../lib/constants.js';
 import {
-  clientDayAssignments, computeWeekly, dayTaskLabel, fmtHours, getTodayInfo, postKey, slug,
+  clientDayAssignments, computeWeekly, dayTaskLabel, fmtHours, getTodayInfo, itemTimeMin, postKey, slug,
   weekClientBreakdown, weekDone, weekMinutes, weekTarget, wkBucket,
 } from '../lib/derived.js';
 
-const FORMAT_ORDER = ['Carousel', 'Static', 'Reel'];
+const FORMAT_ORDER = ['Carousel', 'Static', 'Reel', 'Reel Cover'];
 
 function WeekItemRow({ item, status }) {
   const c = STATUS_COLOR[status];
@@ -128,9 +128,11 @@ function BatchSchedule({ w, itemsByClient, clientRows, isCurrentWeek }) {
     clients.forEach((client) => {
       (itemsByClient[client] || []).filter((it) => wkBucket(it.week) === w).forEach((it) => {
         counts[it.format] = (counts[it.format] || 0) + 1;
-        minutes += TIME_MIN[it.format] || 0;
+        minutes += itemTimeMin(it.format);
       });
     });
+    // Every Reel implies its own separate cover creative — mirrored 1:1.
+    if (counts.Reel) counts['Reel Cover'] = counts.Reel;
     return { counts, minutes };
   }
 

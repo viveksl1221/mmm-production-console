@@ -18,13 +18,13 @@ export default function OverviewTab() {
       <TodayCard itemsByClient={content.itemsByClient} userId={userId} />
       <StatGrid posts={posts} blogs={blogs} itemsByClient={content.itemsByClient} weeklyData={weeklyData} blogTargets={blogTargets} blogPerWeek={blogPerWeek} />
       <div className="section-label">Clients</div>
-      {ALL_CLIENTS.map((client) => (
+      {ALL_CLIENTS.filter((client) => POST_TARGETS[client] !== undefined).map((client) => (
         <ClientOverviewCard
           key={client}
           client={client}
           items={content.getItems(client)}
           posts={posts}
-          hasP={POST_TARGETS[client] !== undefined}
+          hasP
           hasB={(blogTargets[client] || 0) > 0}
           postTarget={POST_TARGETS[client] || 0}
           blogTarget={blogTargets[client] || 0}

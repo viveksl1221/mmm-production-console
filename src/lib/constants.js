@@ -2,7 +2,12 @@
 // describe *how the studio operates* (batch cadence, time estimates,
 // status pipeline) and don't change from month to month.
 
-export const TIME_MIN = { Static: 25, Carousel: 50, Reel: 75, Blog: 105, Gap: 45 };
+// ReelCover is a separate deliverable from the Reel edit itself — the
+// static cover-thumbnail creative — and gets its own time budget rather
+// than being absorbed silently into the Reel's estimate (see itemTimeMin
+// in derived.js, which adds this on top of Reel time everywhere a Reel's
+// workload is counted).
+export const TIME_MIN = { Static: 25, Carousel: 50, Reel: 75, ReelCover: 25, Blog: 105, Gap: 45 };
 
 // Monday–Thursday are dynamic per week — one client's full day (see
 // clientDayAssignments in derived.js), not a fixed format-based task, so

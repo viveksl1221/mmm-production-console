@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/today', label: "Today's Batch" },
   { to: '/weekly', label: 'Weekly Plan' },
   { to: '/clients', label: 'Clients' },
+  { to: '/blog', label: 'Blog Creatives' },
   { to: '/reports', label: 'Reports' },
   { to: '/comments', label: 'Comments' },
   { to: '/assistant', label: 'AI Assistant' },

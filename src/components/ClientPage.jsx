@@ -247,61 +247,9 @@ function EditableItemRow({ client, item, status, isOpen, onToggleOpen, onSave, o
   );
 }
 
-function BlogSection({ client, blogTarget, blogCount, onBlogChange, onTargetChange }) {
-  const pct = blogTarget ? Math.min(100, Math.round((blogCount / blogTarget) * 100)) : 0;
-  const [editingTarget, setEditingTarget] = useState(false);
-  const [targetDraft, setTargetDraft] = useState(String(blogTarget));
-
-  function openEdit() {
-    setTargetDraft(String(blogTarget));
-    setEditingTarget(true);
-  }
-
-  function commitTarget() {
-    setEditingTarget(false);
-    const n = parseInt(targetDraft, 10);
-    if (Number.isFinite(n) && n >= 0 && n !== blogTarget) {
-      onTargetChange(client, n);
-    }
-  }
-
-  return (
-    <div className="blog-section">
-      <div className="blog-hero">
-        <div className="blog-hero-num mono">
-          {blogCount}
-          {editingTarget ? (
-            <input
-              type="number"
-              min="0"
-              className="blog-target-input"
-              autoFocus
-              value={targetDraft}
-              onChange={(e) => setTargetDraft(e.target.value)}
-              onBlur={commitTarget}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitTarget();
-                if (e.key === 'Escape') setEditingTarget(false);
-              }}
-            />
-          ) : (
-            <button className="blog-hero-target" onClick={openEdit} title="Edit target">/ {blogTarget}</button>
-          )}
-        </div>
-        <div className="blog-hero-label">Blog creatives published this month</div>
-        <div className="bar-track blog-hero-bar"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-      </div>
-      <div className="blog-controls">
-        <button className="blog-btn" onClick={() => onBlogChange(client, Math.max(0, blogCount - 1))}>−</button>
-        <button className="blog-btn" onClick={() => onBlogChange(client, Math.min(blogTarget, blogCount + 1))}>+</button>
-      </div>
-    </div>
-  );
-}
-
 export default function ClientPage() {
   const { clientSlug } = useParams();
-  const { posts, blogs, setPostStatus, setBlogCount, setBlogTarget, content, userId, blogTargets } = useOutletContext();
+  const { posts, setPostStatus, content, userId } = useOutletContext();
   const client = ALL_CLIENTS.find((c) => slug(c) === clientSlug);
   const [openNum, setOpenNum] = useState(null);
   const [pendingRemove, setPendingRemove] = useState(null);
@@ -310,8 +258,6 @@ export default function ClientPage() {
 
   const items = client ? content.getItems(client) : [];
   const hasP = client ? POST_TARGETS[client] !== undefined : false;
-  const blogTarget = client ? blogTargets[client] || 0 : 0;
-  const hasB = blogTarget > 0;
   const [section, setSection] = useState(null);
 
   if (!client) {
@@ -322,16 +268,15 @@ export default function ClientPage() {
     );
   }
 
-  const blogCount = blogs[client] || 0;
   const removeTarget = pendingRemove != null ? items.find((it) => it.num === pendingRemove) : null;
 
-  // Brand Kit is always available, even for clients with only posts or only
-  // blog creatives — the previous "only show tabs if both sections exist"
-  // rule would've hidden it (and the tab bar entirely) for those clients.
+  // Brand Kit is always available, even for clients with no posts (blog
+  // creative work is tracked separately on /blog, not here) — the previous
+  // "only show tabs if both sections exist" rule would've hidden it (and
+  // the tab bar entirely) for those clients.
   const tabs = [
     hasP && { key: 'posts', label: 'Posts', count: items.length },
     hasP && { key: 'grid', label: 'Grid Preview' },
-    hasB && { key: 'blog', label: 'Blog Creatives', count: `${blogCount}/${blogTarget}` },
     { key: 'brand', label: 'Brand Kit' },
   ].filter(Boolean);
   const activeSection = section || tabs[0].key;
@@ -345,10 +290,6 @@ export default function ClientPage() {
           </button>
         ))}
       </div>
-
-      {activeSection === 'blog' && hasB && (
-        <BlogSection client={client} blogTarget={blogTarget} blogCount={blogCount} onBlogChange={setBlogCount} onTargetChange={setBlogTarget} />
-      )}
 
       {activeSection === 'brand' && (
         <BrandKitSection kit={getKit(client)} onSave={(draft) => saveKit(client, draft)} />

@@ -15,7 +15,8 @@ function greeting() {
 
 const COPY = {
   '/weekly': { title: 'Weekly Plan', subtitle: 'Batch cadence, week by week' },
-  '/clients': { title: 'Clients', subtitle: 'Every post and blog creative, by client' },
+  '/clients': { title: 'Clients', subtitle: 'Every post, by client' },
+  '/blog': { title: 'Blog Creatives', subtitle: 'Blog creative targets and progress, every client in one place' },
   '/reports': { title: 'Reports', subtitle: 'Weekly and monthly reports — copy or download as PDF' },
   '/comments': { title: 'Comments', subtitle: 'Feedback and notes from the team' },
   '/assistant': { title: 'AI Assistant', subtitle: 'Ask about prioritizing, batching, or drafting hooks' },

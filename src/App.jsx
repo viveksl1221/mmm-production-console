@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { LoginScreen } from './components/AuthGate.jsx';
 import AssistantWidget from './components/AssistantWidget.jsx';
+import BlogPage from './components/BlogPage.jsx';
 import ChatPage from './components/ChatPage.jsx';
 import ClientPage from './components/ClientPage.jsx';
 import ClientsTab from './components/ClientsTab.jsx';
@@ -81,6 +82,7 @@ export default function App() {
         <Route path="weekly" element={<WeeklyTab />} />
         <Route path="clients" element={<ClientsTab />} />
         <Route path="clients/:clientSlug" element={<ClientPage />} />
+        <Route path="blog" element={<BlogPage />} />
         <Route path="comments" element={<CommentsPage />} />
         <Route path="assistant" element={<ChatPage />} />
         <Route path="reports" element={<ReportsPage />} />

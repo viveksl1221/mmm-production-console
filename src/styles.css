@@ -551,6 +551,14 @@ a.today-group-name:hover { color: var(--red); }
 .blog-hero-label { font-size: 12.5px; color: var(--ink-dim); margin-top: 6px; }
 .blog-hero-bar { margin-top: 14px; height: 8px; }
 
+.blog-page { display: flex; flex-direction: column; gap: 16px; }
+.blog-client-card {
+  background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card); padding: 20px 24px 24px;
+}
+.blog-client-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.blog-client-card .blog-section { padding: 0; box-shadow: none; border: none; border-radius: 0; }
+
 /* ===== Brand Kit ===== */
 .brand-kit { background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 24px 26px; }
 .brand-kit-toolbar { display: flex; justify-content: flex-end; margin-bottom: 4px; }

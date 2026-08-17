@@ -23,9 +23,8 @@ export default function ClientsTab() {
         <button className="add-post-btn" onClick={() => setImportOpen(true)}>Import calendar</button>
       </div>
 
-      {ALL_CLIENTS.map((client) => {
+      {ALL_CLIENTS.filter((client) => POST_TARGETS[client] !== undefined).map((client) => {
         const items = content.getItems(client);
-        const hasP = POST_TARGETS[client] !== undefined;
 
         let doneCount = 0;
         items.forEach((it) => {
@@ -40,8 +39,7 @@ export default function ClientsTab() {
         const totalTarget = postTarget + blogTarget;
         const pct = totalTarget ? Math.round((totalDone / totalTarget) * 100) : 0;
 
-        const metaBits = [];
-        if (hasP) metaBits.push(`${items.length}/${postTarget} posts planned`);
+        const metaBits = [`${items.length}/${postTarget} posts planned`];
         if (hasB) metaBits.push(`${blogTarget} blog creatives`);
 
         return (
