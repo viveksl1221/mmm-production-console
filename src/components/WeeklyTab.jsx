@@ -2,41 +2,74 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { FIKA_GAP, WEEK_RANGES } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
-import { BATCH_TASK, TIME_MIN } from '../lib/constants.js';
+import { BATCH_TASK, STATUS_COLOR, TIME_MIN } from '../lib/constants.js';
 import {
-  computeWeekly, dayFormatPriority, fmtHours, getTodayInfo, slug, weekBlogTotal,
-  weekClientBreakdown, weekDone, weekMinutes, weekPostTotal, weekTarget,
+  computeWeekly, dayFormatPriority, fmtHours, getTodayInfo, postKey, slug, weekBlogTotal,
+  weekClientBreakdown, weekDone, weekMinutes, weekPostTotal, weekTarget, wkBucket,
 } from '../lib/derived.js';
 
 const FORMAT_ORDER = ['Carousel', 'Static', 'Reel'];
 
-function ClientBreakdownRow({ row, hasGap }) {
-  const pct = row.total ? Math.round((row.done / row.total) * 100) : 0;
+function WeekItemRow({ item, status }) {
+  const c = STATUS_COLOR[status];
   return (
-    <Link to={`/clients/${slug(row.client)}`} className="week-client-row">
-      {CLIENT_LOGOS[row.client] && <img className="week-client-logo" src={CLIENT_LOGOS[row.client]} alt="" />}
-      <div className="week-client-name">{row.client}</div>
-      <div className="week-client-formats">
-        {FORMAT_ORDER.filter((f) => row.counts[f] > 0).map((f) => (
-          <span className="format-pill" key={f}>{row.counts[f]} {f}</span>
-        ))}
-        {row.blogCount > 0 && <span className="format-pill">{row.blogCount} Blog Creative{row.blogCount > 1 ? 's' : ''}</span>}
-        {hasGap && <span className="format-pill format-warn">+{FIKA_GAP[hasGap]} open</span>}
-      </div>
-      <div className="week-client-progress">
-        <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-        <div className="bar-num mono">{row.done}/{row.total}</div>
-      </div>
-    </Link>
+    <div className="week-item-row">
+      <span className="item-num">#{item.num}</span>
+      <span className="format-pill">{item.format}</span>
+      <div className="week-item-topic">{item.topic || '(untitled)'}</div>
+      <div className="week-item-hook">{item.hook}</div>
+      <span className="status-count-pill" style={{ background: c.bg, color: c.fg, borderColor: c.bd }}>{status}</span>
+    </div>
   );
 }
 
-function ClientBreakdown({ w, rows }) {
+function ClientBreakdownRow({ row, w, weekItems, posts, hasGap }) {
+  const [open, setOpen] = useState(false);
+  const pct = row.total ? Math.round((row.done / row.total) * 100) : 0;
+  return (
+    <div className="week-client-block">
+      <div className="week-client-row" onClick={() => setOpen(!open)}>
+        {CLIENT_LOGOS[row.client] && <img className="week-client-logo" src={CLIENT_LOGOS[row.client]} alt="" />}
+        <div className="week-client-name">{row.client}</div>
+        <div className="week-client-formats">
+          {FORMAT_ORDER.filter((f) => row.counts[f] > 0).map((f) => (
+            <span className="format-pill" key={f}>{row.counts[f]} {f}</span>
+          ))}
+          {row.blogCount > 0 && <span className="format-pill">{row.blogCount} Blog Creative{row.blogCount > 1 ? 's' : ''}</span>}
+          {hasGap && <span className="format-pill format-warn">+{FIKA_GAP[hasGap]} open</span>}
+        </div>
+        <div className="week-client-progress">
+          <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+          <div className="bar-num mono">{row.done}/{row.total}</div>
+        </div>
+        <span className={`chev ${open ? 'chev-open' : ''}`}>▸</span>
+      </div>
+
+      {open && (
+        <div className="week-client-detail">
+          {weekItems.map((item) => (
+            <WeekItemRow key={item.num} item={item} status={posts[postKey(row.client, item.num)] || 'Planned'} />
+          ))}
+          <Link to={`/clients/${slug(row.client)}`} className="client-detail-open-link">Open full client page ▸</Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientBreakdown({ w, rows, itemsByClient, posts }) {
   if (!rows.length) return <div className="week-empty">No posts scheduled for this week yet.</div>;
   return (
     <div className="week-client-list">
       {rows.map((row) => (
-        <ClientBreakdownRow key={row.client} row={row} hasGap={row.client === 'Fika Time' && FIKA_GAP[w] ? w : null} />
+        <ClientBreakdownRow
+          key={row.client}
+          row={row}
+          w={w}
+          weekItems={(itemsByClient[row.client] || []).filter((it) => wkBucket(it.week) === w)}
+          posts={posts}
+          hasGap={row.client === 'Fika Time' && FIKA_GAP[w] ? w : null}
+        />
       ))}
     </div>
   );
@@ -172,7 +205,7 @@ function WeekCard({ w, isCurrent, isOpen, onToggle, itemsByClient, posts, weekly
       </div>
       <div className="wk-body">
         <div className="section-label wk-section-label">By client</div>
-        <ClientBreakdown w={w} rows={clientRows} />
+        <ClientBreakdown w={w} rows={clientRows} itemsByClient={itemsByClient} posts={posts} />
 
         {FIKA_GAP[w] && <div className="note">Includes {FIKA_GAP[w]} Fika Time slots with no topic yet — plan these Monday, before the rest of the week's copy.</div>}
         {weekMinutes(w, weeklyData, blogPerWeek) / 60 > 32 && <div className="note">~{fmtHours(weekMinutes(w, weeklyData, blogPerWeek))} of production this week (~{(weekMinutes(w, weeklyData, blogPerWeek) / 60 / 5).toFixed(1)}h/day across a 5-day batch).</div>}
