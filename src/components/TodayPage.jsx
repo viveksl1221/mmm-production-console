@@ -167,6 +167,7 @@ export default function TodayPage() {
   const [detailFor, setDetailFor] = useState(null);
   const [extraTitle, setExtraTitle] = useState('');
   const [summaryText, setSummaryText] = useState(null);
+  const [showCompletedExtra, setShowCompletedExtra] = useState(false);
 
   // Forces a re-render every second so running timers visibly tick — only
   // costs anything while this page is mounted and someone has a clock going.
@@ -321,7 +322,11 @@ export default function TodayPage() {
   }
 
   const monthTasks = extra.tasks.filter((t) => inCampaignMonth(t.createdAt));
-  const monthDone = monthTasks.filter((t) => t.status === 'completed').length;
+  const activeExtraTasks = extra.tasks.filter((t) => t.status !== 'completed');
+  const completedExtraTasks = monthTasks
+    .filter((t) => t.status === 'completed')
+    .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
+  const monthDone = completedExtraTasks.length;
 
   async function handleAddExtra(e) {
     e.preventDefault();
@@ -349,7 +354,6 @@ export default function TodayPage() {
       <div className="today-extra-section">
         <div className="today-extra-head">
           <div className="section-label today-extra-label">Additional Tasks</div>
-          <div className="today-extra-month mono">{monthDone}/{monthTasks.length} done this month</div>
         </div>
         <form className="today-extra-form" onSubmit={handleAddExtra}>
           <input
@@ -363,11 +367,11 @@ export default function TodayPage() {
         </form>
         {extra.loading ? (
           <div className="loading-state">Loading…</div>
-        ) : extra.tasks.length === 0 ? (
+        ) : activeExtraTasks.length === 0 ? (
           <div className="empty-state">Nothing extra on the list.</div>
         ) : (
           <div className="today-group-rows">
-            {extra.tasks.map((t) => (
+            {activeExtraTasks.map((t) => (
               <ChecklistRow
                 key={t.id}
                 title={t.title}
@@ -379,6 +383,33 @@ export default function TodayPage() {
                 onRemove={() => extra.removeTask(t.id)}
               />
             ))}
+          </div>
+        )}
+
+        {monthTasks.length > 0 && (
+          <div className="today-extra-completed">
+            <button className="today-extra-completed-toggle" onClick={() => setShowCompletedExtra(!showCompletedExtra)}>
+              <span className={`chev ${showCompletedExtra ? 'chev-open' : ''}`}>▸</span>
+              Completed this month
+              <span className="today-extra-month mono">{monthDone}/{monthTasks.length}</span>
+            </button>
+            {showCompletedExtra && (
+              completedExtraTasks.length === 0 ? (
+                <div className="empty-state">Nothing completed yet this month.</div>
+              ) : (
+                <div className="today-group-rows">
+                  {completedExtraTasks.map((t) => (
+                    <ChecklistRow
+                      key={t.id}
+                      title={t.title}
+                      entry={t}
+                      onReset={() => extra.resetItem(t.id)}
+                      onRemove={() => extra.removeTask(t.id)}
+                    />
+                  ))}
+                </div>
+              )
+            )}
           </div>
         )}
       </div>

@@ -292,6 +292,15 @@ a.today-group-name:hover { color: var(--red); }
 .today-extra-form { display: flex; gap: 8px; margin-bottom: 14px; }
 .today-extra-input { flex: 1; border: 1px solid var(--rule); background: #fff; padding: 9px 12px; }
 
+.today-extra-completed { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.today-extra-completed-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; font-weight: 700; color: var(--ink-faint);
+}
+.today-extra-completed-toggle:hover { color: var(--ink-dim); }
+.today-extra-completed-toggle .today-extra-month { margin-left: auto; text-transform: none; letter-spacing: normal; font-weight: 600; }
+.today-extra-completed .today-group-rows { margin-top: 12px; }
+
 .today-row {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
   background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--radius-sm);
