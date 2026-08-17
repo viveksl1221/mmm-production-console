@@ -57,7 +57,7 @@ export function buildReportText({ scope, week, itemsByClient, posts, blogs, week
   if (scope === 'weekly') {
     lines.push(...weekSectionLines(week, itemsByClient, posts, weeklyData, blogPerWeek));
   } else {
-    lines.push(`OVERALL — ${totalShipped(posts, blogs)}/${totalTargets(blogTargets)} shipped this month`);
+    lines.push(`OVERALL — ${totalShipped(itemsByClient, posts, blogs)}/${totalTargets(blogTargets, itemsByClient)} shipped this month`);
     lines.push('');
     [1, 2, 3, 4].forEach((w) => {
       lines.push(...weekSectionLines(w, itemsByClient, posts, weeklyData, blogPerWeek));

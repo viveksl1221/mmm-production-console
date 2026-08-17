@@ -75,8 +75,8 @@ export default function ReportsPage() {
   const weeklyData = computeWeekly(content.itemsByClient);
   const isWeekly = scope === 'weekly';
 
-  const target = isWeekly ? weekTarget(week, weeklyData, blogPerWeek) : totalTargets(blogTargets);
-  const done = isWeekly ? weekDone(week, content.itemsByClient, posts) : totalShipped(posts, blogs);
+  const target = isWeekly ? weekTarget(week, weeklyData, blogPerWeek) : totalTargets(blogTargets, content.itemsByClient);
+  const done = isWeekly ? weekDone(week, content.itemsByClient, posts) : totalShipped(content.itemsByClient, posts, blogs);
   const hours = isWeekly
     ? weekMinutes(week, weeklyData, blogPerWeek)
     : [1, 2, 3, 4].reduce((a, w) => a + weekMinutes(w, weeklyData, blogPerWeek), 0);

@@ -34,8 +34,8 @@ function ConsoleLayout({ userId, onSignOut }) {
   return (
     <div id="console-root">
       <Sidebar
-        shipped={totalShipped(posts, blogs)}
-        target={totalTargets(effectiveTargets)}
+        shipped={totalShipped(content.itemsByClient, posts, blogs)}
+        target={totalTargets(effectiveTargets, content.itemsByClient)}
         showSignOut={!!onSignOut}
         onSignOut={onSignOut}
       />

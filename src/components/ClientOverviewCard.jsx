@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
-import { clientDetailBreakdown, postKey, slug } from '../lib/derived.js';
+import { clientDetailBreakdown, creativeWeight, postKey, slug } from '../lib/derived.js';
 import { STATUS_COLOR } from '../lib/constants.js';
 
 export default function ClientOverviewCard({ client, items, posts, hasP, hasB, postTarget, blogTarget, blogCount, weekLabel, weekData }) {
   const [open, setOpen] = useState(false);
 
   let doneCount = 0;
+  let reelCount = 0;
   items.forEach((it) => {
-    if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') doneCount++;
+    if (it.format === 'Reel') reelCount++;
+    if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') doneCount += creativeWeight(it.format);
   });
 
   const totalDone = doneCount + blogCount;
-  const totalTarget = postTarget + blogTarget;
+  const totalTarget = postTarget + reelCount + blogTarget;
   const pct = totalTarget ? Math.round((totalDone / totalTarget) * 100) : 0;
 
   const metaBits = [];
@@ -54,7 +56,7 @@ export default function ClientOverviewCard({ client, items, posts, hasP, hasB, p
                   <span className="format-pill">{weekData.blogCount} Blog Creative{weekData.blogCount > 1 ? 's' : ''}</span>
                 )}
               </div>
-              <div className="client-detail-week-progress">{weekData.done}/{weekData.total} posts done this week</div>
+              <div className="client-detail-week-progress">{weekData.done}/{weekData.total} creatives done this week</div>
             </div>
           )}
 

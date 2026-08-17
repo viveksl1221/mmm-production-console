@@ -44,6 +44,19 @@ export function itemTimeMin(format) {
   return format === 'Reel' ? base + TIME_MIN.ReelCover : base;
 }
 
+// A Reel counts as 2 creatives toward every target/shipped total — the edit
+// plus its separate cover — everywhere else counts as 1. Used consistently
+// across every "X/Y shipped" stat in the app so they all agree with each
+// other (see totalTargets/totalShipped/weekPostTotal/weekDone/
+// weekClientBreakdown), not just the Overview breakdown pills.
+export function creativeWeight(format) {
+  return format === 'Reel' ? 2 : 1;
+}
+
+function reelBonus(items) {
+  return (items || []).filter((it) => it.format === 'Reel').length;
+}
+
 // Weekly format/client breakdown, computed fresh from live content.
 // Shape: { [week]: { Static, Carousel, Reel, clients: { [client]: { Static, Carousel, Reel, total } } } }
 export function computeWeekly(itemsByClient) {
@@ -76,14 +89,18 @@ export function weekClientBreakdown(w, itemsByClient, posts, blogPerWeek) {
     if (!items.length) return;
     const counts = { Static: 0, Carousel: 0, Reel: 0 };
     let done = 0;
+    let total = 0;
     items.forEach((it) => {
       counts[it.format] = (counts[it.format] || 0) + 1;
-      if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') done++;
+      const weight = creativeWeight(it.format);
+      total += weight;
+      if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') done += weight;
     });
     // Every Reel implies its own separate cover creative — mirrored 1:1,
-    // not independently statused (see itemTimeMin).
+    // not independently statused (see itemTimeMin), and already counted as
+    // the extra creative unit via creativeWeight above.
     if (counts.Reel) counts['Reel Cover'] = counts.Reel;
-    rows.push({ client, counts, total: items.length, done, blogCount: blogPerWeek?.[w]?.[client] || 0 });
+    rows.push({ client, counts, total, done, blogCount: blogPerWeek?.[w]?.[client] || 0 });
   });
   return rows.sort((a, b) => b.total - a.total);
 }
@@ -166,7 +183,7 @@ export function weekBlogTotal(w, blogPerWeek) {
 }
 export function weekPostTotal(w, weeklyData) {
   const f = weeklyData[w];
-  return (f.Static || 0) + (f.Carousel || 0) + (f.Reel || 0) + (FIKA_GAP[w] || 0);
+  return (f.Static || 0) + (f.Carousel || 0) + (f.Reel || 0) * 2 + (FIKA_GAP[w] || 0);
 }
 export function weekTarget(w, weeklyData, blogPerWeek) {
   return weekPostTotal(w, weeklyData) + weekBlogTotal(w, blogPerWeek);
@@ -184,7 +201,7 @@ export function weekDone(w, itemsByClient, posts) {
   Object.keys(itemsByClient).forEach((client) => {
     (itemsByClient[client] || []).forEach((it) => {
       if (wkBucket(it.week) !== w) return;
-      if (posts[postKey(client, it.num)] === 'Approved') done++;
+      if (posts[postKey(client, it.num)] === 'Approved') done += creativeWeight(it.format);
     });
   });
   return done;
@@ -250,17 +267,27 @@ export function clientDetailBreakdown(client, items, posts, blogCount, blogTarge
   return { formats, statuses, blogCount, blogTarget };
 }
 
-export function totalTargets(blogTargets) {
+// Every planned Reel adds 1 to a client's effective target on top of the
+// fixed POST_TARGETS number — POST_TARGETS is a post-count target set at
+// month-start and has no way to know the eventual format mix, so the Reel
+// Cover bonus is derived from whatever's actually been planned so far
+// (grows as Reel posts get added, same as itemsByClient.length already does
+// for the "planned" side of "X/Y posts planned").
+export function totalTargets(blogTargets, itemsByClient) {
   let t = 0;
-  Object.values(POST_TARGETS).forEach((v) => (t += v));
+  Object.keys(POST_TARGETS).forEach((client) => {
+    t += POST_TARGETS[client] + reelBonus(itemsByClient?.[client]);
+  });
   Object.values(blogTargets).forEach((v) => (t += v));
   return t;
 }
 
-export function totalShipped(posts, blogs) {
+export function totalShipped(itemsByClient, posts, blogs) {
   let n = 0;
-  Object.values(posts).forEach((s) => {
-    if (s === 'Approved') n++;
+  Object.keys(itemsByClient).forEach((client) => {
+    (itemsByClient[client] || []).forEach((it) => {
+      if (posts[postKey(client, it.num)] === 'Approved') n += creativeWeight(it.format);
+    });
   });
   Object.values(blogs).forEach((c) => {
     n += c || 0;

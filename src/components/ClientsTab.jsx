@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { ALL_CLIENTS, POST_TARGETS } from '../data/campaign.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
 import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
-import { postKey, slug } from '../lib/derived.js';
+import { creativeWeight, postKey, slug } from '../lib/derived.js';
 import ImportModal from './ImportModal.jsx';
 
 export default function ClientsTab() {
@@ -27,8 +27,10 @@ export default function ClientsTab() {
         const items = content.getItems(client);
 
         let doneCount = 0;
+        let reelCount = 0;
         items.forEach((it) => {
-          if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') doneCount++;
+          if (it.format === 'Reel') reelCount++;
+          if ((posts[postKey(client, it.num)] || 'Planned') === 'Approved') doneCount += creativeWeight(it.format);
         });
 
         const postTarget = POST_TARGETS[client] || 0;
@@ -36,7 +38,7 @@ export default function ClientsTab() {
         const hasB = blogTarget > 0;
         const blogCount = blogs[client] || 0;
         const totalDone = doneCount + blogCount;
-        const totalTarget = postTarget + blogTarget;
+        const totalTarget = postTarget + reelCount + blogTarget;
         const pct = totalTarget ? Math.round((totalDone / totalTarget) * 100) : 0;
 
         const metaBits = [`${items.length}/${postTarget} posts planned`];

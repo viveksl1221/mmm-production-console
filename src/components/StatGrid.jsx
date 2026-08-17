@@ -2,8 +2,8 @@ import { WEEK_RANGES } from '../data/campaign.js';
 import { fmtHours, getTodayInfo, remainingBreakdown, totalTargets, totalShipped, weekDone, weekTarget, weekMinutes } from '../lib/derived.js';
 
 export default function StatGrid({ posts, blogs, itemsByClient, weeklyData, blogTargets, blogPerWeek }) {
-  const target = totalTargets(blogTargets);
-  const shipped = totalShipped(posts, blogs);
+  const target = totalTargets(blogTargets, itemsByClient);
+  const shipped = totalShipped(itemsByClient, posts, blogs);
   const { weekNum } = getTodayInfo();
   const wk = weekNum || 1;
   const remaining = remainingBreakdown(itemsByClient, posts, blogs, blogTargets);
