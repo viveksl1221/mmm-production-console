@@ -151,6 +151,13 @@ create policy "can update post_status"
   using (true)
   with check (true);
 
+-- Needed so "Replace all" import can clean up status rows for posts it
+-- deletes (post_status previously only supported upsert, never delete).
+create policy "can delete post_status"
+  on post_status for delete
+  to public
+  using (true);
+
 create policy "can upsert blog_counts"
   on blog_counts for insert
   to public

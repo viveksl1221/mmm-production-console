@@ -848,6 +848,8 @@ button.chat-send-btn { align-self: flex-end; flex-shrink: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .add-post-btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
 .add-post-btn.primary:hover { background: var(--red-hover); color: #fff; }
+.add-post-btn.primary.danger { background: var(--ink); border-color: var(--ink); }
+.add-post-btn.primary.danger:hover { background: #000; }
 .add-post-btn:disabled { opacity: 0.5; cursor: default; }
 .add-post-btn:disabled:hover { border-color: var(--rule); color: var(--ink); }
 
@@ -858,8 +860,19 @@ button.chat-send-btn { align-self: flex-end; flex-shrink: 0; }
 .diff-added { color: var(--ink); font-weight: 700; }
 .diff-changed { color: var(--red); }
 .diff-unchanged { color: var(--ink-faint); }
+.diff-removed { color: var(--red-dark); font-weight: 700; }
 .import-diff-list { margin: 8px 0 0; padding-left: 16px; font-size: 11.5px; color: var(--ink-dim); }
 .import-diff-list li { margin-bottom: 3px; }
+
+.import-mode-picker { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.import-mode-option {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); cursor: pointer; transition: border-color .15s ease, background .15s ease;
+}
+.import-mode-option input { margin-top: 3px; accent-color: var(--red); }
+.import-mode-option.selected { border-color: var(--red); background: var(--red-tint); }
+.import-mode-title { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.import-mode-desc { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; line-height: 1.4; }
 
 @media (max-width: 640px) {
   .modal-overlay { padding: 0; align-items: stretch; }

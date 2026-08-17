@@ -162,5 +162,23 @@ export function useClientContent(userId) {
     await supabase.from('posts').upsert(rows);
   }
 
-  return { getItems, updateItem, addItem, removeItem, importItems, loading, itemsByClient };
+  // Like importItems, but treats the incoming set as the client's complete
+  // new list — any existing Post # not present in `items` is deleted
+  // (posts row + its post_status row), instead of being left alone.
+  async function replaceItems(client, items) {
+    const existing = itemsByClient[client] || [];
+    const incomingNums = new Set(items.map((it) => it.num));
+    const removedNums = existing.filter((it) => !incomingNums.has(it.num)).map((it) => it.num);
+
+    setItemsByClient((prev) => ({ ...prev, [client]: [...items].sort((a, b) => a.num - b.num) }));
+
+    if (removedNums.length) {
+      await supabase.from('posts').delete().eq('client', client).in('num', removedNums);
+      await supabase.from('post_status').delete().eq('client', client).in('post_num', removedNums);
+    }
+    const rows = items.map((item) => toRow(client, item, userId));
+    await supabase.from('posts').upsert(rows);
+  }
+
+  return { getItems, updateItem, addItem, removeItem, importItems, replaceItems, loading, itemsByClient };
 }

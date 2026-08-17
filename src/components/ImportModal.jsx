@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ALL_CLIENTS } from '../data/campaign.js';
+import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
+import { postKey, slug } from '../lib/derived.js';
 import {
   FIELD_OPTIONS, diffItems, guessClientForSheet, guessFieldForHeader, parseWorkbookFile,
   reconcileNumbersByTopic, rowsToItems,
@@ -50,7 +52,8 @@ function SheetMapping({ sheet, lockedClient, onChangeClient, onChangeColumn }) {
   );
 }
 
-function DiffSummary({ client, diff }) {
+function DiffSummary({ client, diff, mode }) {
+  const showRemoved = mode === 'replace' && diff.removed.length > 0;
   return (
     <div className="import-diff-card">
       <div className="import-diff-head">
@@ -59,6 +62,7 @@ function DiffSummary({ client, diff }) {
           {diff.added.length > 0 && <span className="diff-added">+{diff.added.length} new</span>}
           {diff.changed.length > 0 && <span className="diff-changed">{diff.changed.length} updated</span>}
           {diff.unchanged.length > 0 && <span className="diff-unchanged">{diff.unchanged.length} unchanged</span>}
+          {showRemoved && <span className="diff-removed">−{diff.removed.length} removed</span>}
         </span>
       </div>
       {diff.changed.length > 0 && (
@@ -75,14 +79,22 @@ function DiffSummary({ client, diff }) {
           ))}
         </ul>
       )}
+      {showRemoved && (
+        <ul className="import-diff-list">
+          {diff.removed.map((item) => (
+            <li key={item.num}>#{item.num} {item.topic || '(untitled)'} <span className="diff-removed">will be deleted</span></li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-export default function ImportModal({ content, setPostStatus, lockedClient, onClose }) {
+export default function ImportModal({ content, posts, setPostStatus, lockedClient, onClose }) {
   const [step, setStep] = useState('upload');
   const [error, setError] = useState('');
   const [sheets, setSheets] = useState([]);
+  const [mode, setMode] = useState('merge');
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -138,8 +150,19 @@ export default function ImportModal({ content, setPostStatus, lockedClient, onCl
   }, [step]);
 
   function applyImport() {
+    if (mode === 'replace') {
+      // Replace hard-deletes rows the new file doesn't mention — back up
+      // what's there now first so a month's data is never silently lost.
+      preview.forEach(({ client, diff }) => {
+        const existing = content.getItems(client);
+        if (!existing.length) return;
+        const csv = itemsToCSV([[client, existing]], (c, num) => posts[postKey(c, num)] || 'Planned', false);
+        downloadCSV(`${slug(client)}-backup-before-replace.csv`, csv);
+      });
+    }
     preview.forEach(({ client, items, statusByNum }) => {
-      content.importItems(client, items);
+      if (mode === 'replace') content.replaceItems(client, items);
+      else content.importItems(client, items);
       statusByNum.forEach((status, num) => setPostStatus(client, num, status));
     });
     setStep('done');
@@ -160,6 +183,26 @@ export default function ImportModal({ content, setPostStatus, lockedClient, onCl
                 ? `Upload an .xlsx or .csv export of ${lockedClient}'s content calendar. You'll confirm what each column means next, before anything is applied.`
                 : "Upload an .xlsx or .csv export of your content calendar. Each sheet tab is matched to a client by name — you'll confirm the mapping and column meanings next, before anything is applied."}
             </p>
+
+            {lockedClient && (
+              <div className="import-mode-picker">
+                <label className={`import-mode-option ${mode === 'merge' ? 'selected' : ''}`}>
+                  <input type="radio" name="import-mode" checked={mode === 'merge'} onChange={() => setMode('merge')} />
+                  <div>
+                    <div className="import-mode-title">Add / update</div>
+                    <div className="import-mode-desc">Matches by Post #. New rows get added, existing ones get updated. Nothing is deleted.</div>
+                  </div>
+                </label>
+                <label className={`import-mode-option ${mode === 'replace' ? 'selected' : ''}`}>
+                  <input type="radio" name="import-mode" checked={mode === 'replace'} onChange={() => setMode('replace')} />
+                  <div>
+                    <div className="import-mode-title">Replace all</div>
+                    <div className="import-mode-desc">This file becomes {lockedClient}'s complete list — any existing post not in it gets deleted. A backup CSV downloads automatically first.</div>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} />
             {error && <div className="import-error">{error}</div>}
           </div>
@@ -195,15 +238,18 @@ export default function ImportModal({ content, setPostStatus, lockedClient, onCl
         {step === 'preview' && (
           <div className="modal-body">
             <p className="import-help">
-              Nothing is applied yet. Rows are matched by Post # — existing posts get updated, new Post #s get
-              added. Rows missing from the file are left alone, not deleted.
+              {mode === 'replace'
+                ? "Nothing is applied yet. This file becomes the complete list — rows missing from it will be deleted (a backup CSV downloads first)."
+                : 'Nothing is applied yet. Rows are matched by Post # — existing posts get updated, new Post #s get added. Rows missing from the file are left alone, not deleted.'}
             </p>
             {preview.map(({ client, diff }) => (
-              <DiffSummary key={client} client={client} diff={diff} />
+              <DiffSummary key={client} client={client} diff={diff} mode={mode} />
             ))}
             <div className="modal-actions">
               <button className="add-post-btn" onClick={() => setStep('map')}>Back</button>
-              <button className="add-post-btn primary" onClick={applyImport}>Apply import</button>
+              <button className={`add-post-btn primary ${mode === 'replace' ? 'danger' : ''}`} onClick={applyImport}>
+                {mode === 'replace' ? 'Replace all' : 'Apply import'}
+              </button>
             </div>
           </div>
         )}

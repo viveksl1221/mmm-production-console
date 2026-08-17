@@ -156,6 +156,7 @@ export function reconcileNumbersByTopic(items, existing) {
 // the imported file are simply left alone.
 export function diffItems(existing, incoming) {
   const existingByNum = new Map(existing.map((it) => [it.num, it]));
+  const incomingNums = new Set(incoming.map((it) => it.num));
   const added = [];
   const changed = [];
   const unchanged = [];
@@ -174,5 +175,9 @@ export function diffItems(existing, incoming) {
     else unchanged.push(inItem);
   });
 
-  return { added, changed, unchanged };
+  // Existing rows the incoming file has no Post # for — only relevant in
+  // "Replace" mode, where these are what would get deleted.
+  const removed = existing.filter((it) => !incomingNums.has(it.num));
+
+  return { added, changed, unchanged, removed };
 }

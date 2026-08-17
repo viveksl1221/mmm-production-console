@@ -395,7 +395,7 @@ export default function ClientPage() {
       )}
 
       {importOpen && (
-        <ImportModal content={content} setPostStatus={setPostStatus} lockedClient={client} onClose={() => setImportOpen(false)} />
+        <ImportModal content={content} posts={posts} setPostStatus={setPostStatus} lockedClient={client} onClose={() => setImportOpen(false)} />
       )}
 
       {pendingRemove != null && (
