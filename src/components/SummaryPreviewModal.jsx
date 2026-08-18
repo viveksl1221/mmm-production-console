@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 // Shows the generated day summary before it goes anywhere, so nothing
 // lands on the clipboard unseen — copy is a deliberate second step here.
-export default function SummaryPreviewModal({ text, onClose }) {
+export default function SummaryPreviewModal({ text, title = 'Summary preview', onClose }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -15,7 +15,7 @@ export default function SummaryPreviewModal({ text, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel summary-preview-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <div className="modal-title">Summary preview</div>
+          <div className="modal-title">{title}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">

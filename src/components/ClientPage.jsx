@@ -4,12 +4,14 @@ import { ALL_CLIENTS, POST_TARGETS } from '../data/campaign.js';
 import { useBrandKits } from '../hooks/useBrandKits.js';
 import { uploadPostAsset } from '../lib/assetUpload.js';
 import { STATUS_COLOR, nextStatus } from '../lib/constants.js';
+import { buildCreativePromptJSON } from '../lib/creativePrompt.js';
 import { downloadCSV, itemsToCSV } from '../lib/csvExport.js';
 import { postKey, slug } from '../lib/derived.js';
 import BrandKitSection from './BrandKitSection.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import GridPreview from './GridPreview.jsx';
 import ImportModal from './ImportModal.jsx';
+import SummaryPreviewModal from './SummaryPreviewModal.jsx';
 
 const FORMATS = ['Static', 'Carousel', 'Reel'];
 const WEEKS = [1, 2, 3, 4, 5];
@@ -107,10 +109,11 @@ function ReferencesEditor({ references, onChange }) {
   );
 }
 
-function EditableItemRow({ client, item, status, isOpen, onToggleOpen, onSave, onStatusChange, onRequestRemove, onAssetSaved }) {
+function EditableItemRow({ client, item, status, isOpen, onToggleOpen, onSave, onStatusChange, onRequestRemove, onAssetSaved, brandKit }) {
   const col = STATUS_COLOR[status];
   const [draft, setDraft] = useState(item);
   const [dirty, setDirty] = useState(false);
+  const [promptPreview, setPromptPreview] = useState(null);
 
   // Pick up changes from elsewhere (realtime updates from a teammate, or a
   // Discard) as long as this row has no unsaved edits of its own.
@@ -231,7 +234,21 @@ function EditableItemRow({ client, item, status, isOpen, onToggleOpen, onSave, o
           <DetailField label="References">
             <ReferencesEditor references={draft.references || []} onChange={(refs) => change({ references: refs })} />
           </DetailField>
+          <button
+            className="copy-ai-btn"
+            onClick={() => setPromptPreview(buildCreativePromptJSON(client, draft, brandKit))}
+          >
+            Copy AI Prompt (JSON) →
+          </button>
         </div>
+      )}
+
+      {promptPreview && (
+        <SummaryPreviewModal
+          text={promptPreview}
+          title={`AI Prompt — #${item.num} ${item.topic || ''}`.trim()}
+          onClose={() => setPromptPreview(null)}
+        />
       )}
 
       {dirty && (
@@ -315,6 +332,7 @@ export default function ClientPage() {
                 onStatusChange={(next) => setPostStatus(client, item.num, next)}
                 onRequestRemove={() => setPendingRemove(item.num)}
                 onAssetSaved={(assetUrl) => content.updateItem(client, item.num, { assetUrl })}
+                brandKit={getKit(client)}
               />
             ))}
           </div>
