@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { STATUS_COLOR } from '../lib/constants.js';
+import { buildCreativePromptJSON } from '../lib/creativePrompt.js';
 import { slug } from '../lib/derived.js';
+import SummaryPreviewModal from './SummaryPreviewModal.jsx';
 
 function DetailView({ label, value }) {
   return (
@@ -15,9 +18,10 @@ function DetailView({ label, value }) {
 // Today's Batch checklist so the details are visible without leaving the
 // page. Editing still happens on the client's own page (linked at the
 // bottom) to keep that the single place edits are made.
-export default function PostDetailModal({ client, item, status, onClose }) {
+export default function PostDetailModal({ client, item, status, brandKit, onClose }) {
   const col = STATUS_COLOR[status] || STATUS_COLOR.Planned;
   const references = item.references || [];
+  const [promptPreview, setPromptPreview] = useState(null);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -70,11 +74,27 @@ export default function PostDetailModal({ client, item, status, onClose }) {
             </div>
           )}
 
-          <Link to={`/clients/${slug(client)}`} className="detail-view-edit-link" onClick={onClose}>
-            Edit in Clients →
-          </Link>
+          <div className="detail-view-actions">
+            <Link to={`/clients/${slug(client)}`} className="detail-view-edit-link" onClick={onClose}>
+              Edit in Clients →
+            </Link>
+            <button
+              className="copy-ai-btn"
+              onClick={() => setPromptPreview(buildCreativePromptJSON(client, item, brandKit))}
+            >
+              Copy AI Prompt (JSON) →
+            </button>
+          </div>
         </div>
       </div>
+
+      {promptPreview && (
+        <SummaryPreviewModal
+          text={promptPreview}
+          title={`AI Prompt — #${item.num} ${item.topic || ''}`.trim()}
+          onClose={() => setPromptPreview(null)}
+        />
+      )}
     </div>
   );
 }

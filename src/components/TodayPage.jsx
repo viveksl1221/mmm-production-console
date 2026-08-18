@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { CAMPAIGN_MONTH_INDEX, CAMPAIGN_YEAR, WEEK_RANGES } from '../data/campaign.js';
+import { useBrandKits } from '../hooks/useBrandKits.js';
 import { useDailyProgress } from '../hooks/useDailyProgress.js';
 import { useExtraTasks } from '../hooks/useExtraTasks.js';
 import { CLIENT_LOGOS } from '../lib/clientLogos.js';
@@ -164,6 +165,7 @@ export default function TodayPage() {
   const { start: monthStart, end: monthEnd } = campaignMonthBounds();
   const { progressByKey, loading, startTimer, pauseTimer, completeItem, resetItem } = useDailyProgress(monthStart, monthEnd, userId);
   const extra = useExtraTasks(userId);
+  const { getKit } = useBrandKits(userId);
   const [detailFor, setDetailFor] = useState(null);
   const [extraTitle, setExtraTitle] = useState('');
   const [summaryText, setSummaryText] = useState(null);
@@ -419,6 +421,7 @@ export default function TodayPage() {
           client={detailFor.client}
           item={detailFor.item}
           status={posts[postKey(detailFor.client, detailFor.item.num)] || 'Planned'}
+          brandKit={getKit(detailFor.client)}
           onClose={() => setDetailFor(null)}
         />
       )}
